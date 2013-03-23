@@ -1,0 +1,30 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+Card	engine/models.py	/^class Card(object):$/;"	c	inherits:object
+Deck	engine/models.py	/^class Deck(object):$/;"	c	inherits:object
+Flask	bobswitch.py	/^        url_for, redirect, Response, jsonify$/;"	i
+Game	engine/engine.py	/^class Game(object):$/;"	c	inherits:object
+HOST	config.py	/^HOST = '0.0.0.0'$/;"	v
+Hand	engine/models.py	/^class Hand(object):$/;"	c	inherits:object
+PORT	config.py	/^PORT = 3000$/;"	v
+PlayedCards	engine/models.py	/^class PlayedCards(object):$/;"	c	inherits:object
+Response	bobswitch.py	/^        url_for, redirect, Response, jsonify$/;"	i
+Room	engine/models.py	/^class Room(object):$/;"	c	inherits:object
+STARTING_CARDS	config.py	/^STARTING_CARDS = 7$/;"	v
+SystemRandom	bobswitch.py	/^from random import SystemRandom$/;"	i
+__init__	engine/engine.py	/^    def __init__(self):$/;"	m	class:Game	access:public
+app	bobswitch.py	/^app = Flask(__name__)$/;"	v
+jsonify	bobswitch.py	/^        url_for, redirect, Response, jsonify$/;"	i
+pick_a_game	bobswitch.py	/^def pick_a_game():$/;"	f	access:public
+play	engine/engine.py	/^    def play(self):$/;"	m	class:Game	access:public
+random	bobswitch.py	/^random = SystemRandom()$/;"	v
+redirect	bobswitch.py	/^        url_for, redirect, Response, jsonify$/;"	i
+render_template	bobswitch.py	/^        url_for, redirect, Response, jsonify$/;"	i
+request	bobswitch.py	/^        url_for, redirect, Response, jsonify$/;"	i
+session	bobswitch.py	/^        url_for, redirect, Response, jsonify$/;"	i
+state	engine/engine.py	/^    def state(self):$/;"	m	class:Game	access:public
+url_for	bobswitch.py	/^        url_for, redirect, Response, jsonify$/;"	i

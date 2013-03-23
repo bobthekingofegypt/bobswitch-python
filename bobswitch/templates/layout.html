@@ -1,0 +1,12 @@
+<!doctype html>
+<title>{% block title %}{% endblock %} | BobSwitch</title>
+<link href={{ url_for('static', filename='css/style.css') }} rel=stylesheet type=text/css>
+<script type=text/javascript src=https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js></script>
+<div>
+  <div class=body>{% block body %}{% endblock %}</div>
+  <div class=footer>
+    <p>
+      &copy; Copyright 2013 by <a href=http://bobstuff.org/>Bob</a>
+    </p>
+  </div>
+</div>
