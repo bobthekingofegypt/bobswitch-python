@@ -21,6 +21,17 @@ class Rank(Enum):
     queen = 12
     king = 13
 
+class Player(object):
+    """
+    Represents a player in the room
+    """
+
+    def __init__(self, name):
+        """
+        name player has chosen for the game
+        """
+        self.name = name
+
 class Room(object):
     """
     Represents a group of players, and there scores for this session

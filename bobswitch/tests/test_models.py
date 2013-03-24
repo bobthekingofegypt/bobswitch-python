@@ -2,6 +2,13 @@ from unittest2 import TestCase, main, skip
 
 from engine import models
 
+class TestPlayer(TestCase):
+
+    def test_init(self):
+        player = models.Player("bob")
+
+        self.assertEquals("bob", player.name)
+
 class TestCard(TestCase):
     
     def test_init_valid(self):
