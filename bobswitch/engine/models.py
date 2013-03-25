@@ -32,6 +32,10 @@ class Player(object):
         """
         self.name = name
 
+    def __repr__(self):
+        return "Player: name - %r" % (self.name,)
+
+
 class Room(object):
     """
     Represents a group of players, and there scores for this session
@@ -67,20 +71,36 @@ class Card(object):
         return "Card: suit - %r, rank - %r" % (self.suit.name, self.rank.name)
 
 
-class Hand(object):
+class CardGroup(object):
     """
-    Represents a set of cards 
+    Base class for a groups of cards such as Hands, Decks etc
     """
-
     def __init__(self):
         self.cards = []
-
-
+    
     def add_card(self, card):
         """
         adds the given card to the hand
         """
         self.cards.append(card)
+
+    def add_cards(self, cards):
+        """
+        adds the given cards to the hand
+        """
+        self.cards.extend(cards)
+
+    def number_of_cards(self):
+        return len(self.cards)
+
+
+class Hand(CardGroup):
+    """
+    Represents a set of cards 
+    """
+
+    def __init__(self):
+        super(Hand,self).__init__()
 
     def contains_card(self, card):
         """
@@ -99,13 +119,31 @@ class Hand(object):
         
         return False
 
+    def __repr__(self):
+        return "Hand: %r" % (self.cards,)
 
-class Deck(object):
+
+class Deck(CardGroup):
     """
-    represents the cards still to play and their order
+    represents a deck of cards stored in an order
     """
-    def banana(self):
-        print "test"
+
+    def __init__(self, random):
+        super(Deck,self).__init__()
+
+        self.random = random
+
+    def deal_card(self):
+        return self.cards.pop()
+
+    def shuffle(self):
+        self.random.shuffle(self.cards)
+        self.random.shuffle(self.cards)
+        self.random.shuffle(self.cards)
+
+    def __repr__(self):
+        return "Cards: %r" % (self.cards)
+
 
 
 class PlayedCards(object):

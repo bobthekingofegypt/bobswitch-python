@@ -1,3 +1,5 @@
+import random
+
 from unittest2 import TestCase, main, skip
 
 from engine import models
@@ -56,18 +58,45 @@ class TestCard(TestCase):
         self.assertNotEquals(card, card2)
 
 
+class TestCardGroup(TestCase):
+
+    def test_init(self):
+        card_group = models.CardGroup()
+        self.assertEquals(0, len(card_group.cards))
+
+    def test_add_card(self):
+        card_group = models.CardGroup()
+        card_group.add_card(models.Card(models.Suit.hearts, models.Rank.ace))
+
+        self.assertEquals(1, len(card_group.cards))
+
+    def test_add_cards(self):
+        card_group = models.CardGroup()
+        cards = [models.Card(models.Suit.hearts, models.Rank.ace),
+                 models.Card(models.Suit.hearts, models.Rank.two)]
+        card_group.add_cards(cards)
+
+        self.assertEquals(2, len(card_group.cards))
+
+    def test_card_count_empty(self):
+        card_group = models.CardGroup()
+
+        self.assertEquals(0, card_group.number_of_cards())
+
+    def test_card_count_not_empty(self):
+        card_group = models.CardGroup()
+
+        card = models.Card(models.Suit.clubs, models.Rank.ace)
+        card_group.add_card(card)
+
+        self.assertEquals(1, card_group.number_of_cards())
+
+
 class TestHand(TestCase):
 
     def test_init(self):
         hand = models.Hand()
         self.assertEquals(0, len(hand.cards))
-        
-
-    def test_add_card(self):
-        hand = models.Hand()
-        hand.add_card(models.Card(models.Suit.hearts, models.Rank.ace))
-
-        self.assertEquals(1, len(hand.cards))
 
     def test_contains(self):
         hand = models.Hand()
@@ -100,3 +129,81 @@ class TestHand(TestCase):
         result = hand.remove_card(card)
         self.assertFalse(result)
         self.assertEquals(1, len(hand.cards))
+
+
+class TestDeck(TestCase):
+
+    def test_init(self):
+        deck = models.Deck(None)
+
+        self.assertEquals(0, len(deck.cards))
+
+    def test_deal_card_empty(self):
+        deck = models.Deck(None)
+        
+        self.failUnlessRaises(IndexError, deck.deal_card)
+
+    def test_deal_card(self):
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.ace))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.ace))
+
+        card = deck.deal_card()
+
+        self.assertEquals(models.Card(models.Suit.diamonds, models.Rank.ace), card)
+
+    def test_shuffle(self):
+        rand = random.Random(64)
+        deck = models.Deck(rand)
+        
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.ace))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.ace))
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.two))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.two))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.two))
+        
+        Suit = models.Suit
+        Rank = models.Rank
+
+        deck.shuffle()
+
+        self.assertEquals(models.Card(Suit.clubs, Rank.ace), deck.deal_card())
+        self.assertEquals(models.Card(Suit.hearts, Rank.two), deck.deal_card())
+        self.assertEquals(models.Card(Suit.hearts, Rank.ace), deck.deal_card())
+
+
+    def test_shuffle_deck_isolation(self):
+        """
+        Playing two decks should not effect each deck
+        Redo shuffle test with another decks moves intersperced
+        """
+        rand = random.Random(64)
+        deck = models.Deck(rand)
+        
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.ace))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.ace))
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.two))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.two))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.two))
+        
+        rand2 = random.Random(8765)
+        deck2 = models.Deck(rand2)
+
+        deck2.add_card(models.Card(models.Suit.hearts, models.Rank.ace))
+        deck2.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        deck2.add_card(models.Card(models.Suit.diamonds, models.Rank.ace))
+        deck2.add_card(models.Card(models.Suit.hearts, models.Rank.two))
+
+        deck2.shuffle()
+        
+        Suit = models.Suit
+        Rank = models.Rank
+
+        deck.shuffle()
+
+        self.assertEquals(models.Card(Suit.clubs, Rank.ace), deck.deal_card())
+        self.assertEquals(models.Card(Suit.hearts, Rank.two), deck.deal_card())
+        self.assertEquals(models.Card(Suit.hearts, Rank.ace), deck.deal_card())
