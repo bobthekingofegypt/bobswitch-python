@@ -16,7 +16,7 @@ def create_deck():
     return deck
 
 
-def deal_player_hands(number_of_cards, players, deck, starting_player):
+def deal_player_hands(number_of_cards, players, deck):
     """
     creates a dictionary of player names to player hand objects and
     deals the number of cards requested one to each player at a time 
@@ -49,11 +49,11 @@ class PlayerHand(object):
 class Game(object):
     
     def __init__(self, players, number_of_cards, deck, starting_player=1):
-        self.current_player = 1
+        self.current_player = starting_player 
         self.number_of_cards = number_of_cards
         self.deck = deck 
 
-        self.player_hands = deal_player_hands(number_of_cards, players, deck, starting_player)
+        self.player_hands = deal_player_hands(number_of_cards, players, deck)
         self.players = players
 
 

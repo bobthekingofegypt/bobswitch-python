@@ -17,7 +17,7 @@ class TestDealPlayerHands(TestCase):
         player_two = models.Player("john")
 
         player_hands = engine.deal_player_hands(7, [player, player_two,], 
-                deck, 1)
+                deck)
 
         self.assertEquals(2, len(player_hands))
 
@@ -45,7 +45,7 @@ class TestDealPlayerHands(TestCase):
         player_two = models.Player("john")
 
         player_hands = engine.deal_player_hands(3, [player, player_two,], 
-                deck, 1)
+                deck)
 
         self.assertEquals(2, len(player_hands))
 
