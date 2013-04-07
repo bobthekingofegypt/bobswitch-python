@@ -1,6 +1,22 @@
 from engine import engine, models
 from unittest2 import TestCase, main, skip
 
+
+def populate_known_deck():
+    deck = models.Deck(None)
+    deck.add_card(models.Card(models.Suit.clubs, models.Rank.seven))
+    deck.add_card(models.Card(models.Suit.clubs, models.Rank.five))
+    deck.add_card(models.Card(models.Suit.clubs, models.Rank.four))
+    deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+    deck.add_card(models.Card(models.Suit.clubs, models.Rank.two))
+    deck.add_card(models.Card(models.Suit.clubs, models.Rank.king))
+    deck.add_card(models.Card(models.Suit.clubs, models.Rank.queen))
+    deck.add_card(models.Card(models.Suit.clubs, models.Rank.jack))
+    deck.add_card(models.Card(models.Suit.clubs, models.Rank.ten))
+
+    return deck
+
+
 class TestCreateDeck(TestCase):
 
     def test_create_deck(self):
@@ -80,8 +96,77 @@ class TestPlayerHand(TestCase):
         self.assertEquals(player, player_hand.player)
         self.assertEquals(0, player_hand.hand.number_of_cards())
 
+
 class TestGame(TestCase):
 
     def test_init(self):
-        pass
-        
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = populate_known_deck()
+
+        game = engine.Game(players, 2, deck)
+
+        self.assertEquals(1, game.current_player)
+        self.assertEquals(players, game.players)
+
+        self.assertEquals(4, game.deck.number_of_cards())
+        self.assertEquals(models.Card(models.Suit.clubs, models.Rank.two), game.top_card)
+
+    def test_init_starting_player(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = populate_known_deck()
+
+        game = engine.Game(players, 2, deck, 2)
+
+        self.assertEquals(2, game.current_player)
+
+    def test_player_hand(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = populate_known_deck()
+
+        game = engine.Game(players, 2, deck)
+
+        player_hand = game.player_hand("bob")
+
+        self.assertEquals(models.Card(models.Suit.clubs, models.Rank.ten), player_hand.cards[0])
+        self.assertEquals(models.Card(models.Suit.clubs, models.Rank.queen), player_hand.cards[1])
+
+    def test_play_wrong_player(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = populate_known_deck()
+
+        game = engine.Game(players, 2, deck)
+
+        play_response = game.play("john", None)
+
+        self.assertEquals(False, play_response.success)
+
+    def test_valid_move(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = populate_known_deck()
+
+        game = engine.Game(players, 2, deck)
+
+        play_response = game.play("bob", None)
+
+        self.assertEquals(False, play_response.success)
+
