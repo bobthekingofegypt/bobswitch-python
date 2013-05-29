@@ -131,12 +131,56 @@ class TestHand(TestCase):
         self.assertEquals(1, len(hand.cards))
 
 
+class TestPlayedCards(TestCase):
+
+    def test_init(self):
+        played_cards = models.PlayedCards()
+        self.assertEquals(0, len(played_cards.cards))
+
+        self.assertIsNone(played_cards.top_card)
+
+    def test_add_card_first_time(self):
+        played_cards = models.PlayedCards()
+        
+        card = models.Card(models.Suit.hearts, models.Rank.ace) 
+        played_cards.add_card(card)
+
+        self.assertEquals(0, len(played_cards.cards))
+        self.assertEquals(card, played_cards.top_card)
+    
+    def test_add_card_second_time(self):
+        played_cards = models.PlayedCards()
+        
+        card = models.Card(models.Suit.hearts, models.Rank.ace) 
+        played_cards.add_card(card)
+
+        self.assertEquals(0, len(played_cards.cards))
+        self.assertEquals(card, played_cards.top_card)
+
+        card2 = models.Card(models.Suit.clubs, models.Rank.ace) 
+        played_cards.add_card(card2)
+
+        self.assertEquals(1, len(played_cards.cards))
+        self.assertTrue(played_cards.contains_card(card))
+        self.assertEquals(card2, played_cards.top_card)
+
 class TestDeck(TestCase):
 
     def test_init(self):
         deck = models.Deck(None)
 
         self.assertEquals(0, len(deck.cards))
+
+    def test_has_card_empty(self):
+        deck = models.Deck(None)
+
+        self.assertFalse(deck.has_card())
+
+    def test_has_card(self):
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.ace))
+
+        self.assertTrue(deck.has_card())
 
     def test_deal_card_empty(self):
         deck = models.Deck(None)

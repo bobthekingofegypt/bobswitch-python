@@ -1,7 +1,7 @@
 import random
 import os
 
-from models import Deck, Card, Suit, Rank, Hand
+from models import Deck, Card, Suit, Rank, Hand, PlayedCards
 from flufl.enum import Enum
 
 
@@ -12,9 +12,8 @@ class MoveType(Enum):
 
 class GameState(Enum):
     NORMAL = 0
-    TWO = 1
-    FOUR = 2
-    EIGHT = 3
+    PICK = 1
+    WAIT = 2
 
 class GameDirection(Enum):
     clockwise = 0
@@ -51,6 +50,23 @@ def deal_player_hands(number_of_cards, players, deck):
     return player_hands
 
 
+def valid_pick(hand, top_card, game_state):
+    """
+    Checks whether a pick would be valid given the hand sent, a pick
+    is valid if the user doesn't have any cards of the same suit, rank
+    or an ace. Cant pick when waiting due to an eight
+    """
+    if game_state == GameState.WAIT:
+        return False
+
+    matching_cards = [card for card in hand.cards 
+            if card.suit == top_card.suit
+            or card.rank == top_card.rank
+            or card.rank == Rank.ace]
+
+    return not (matching_cards) 
+
+
 class PlayerHand(object):
     """
     Holder class to keep a link to player and hand together
@@ -74,6 +90,11 @@ class GameMove(object):
 def invalid_play_response(message):
     play_response = PlayResponse(False)
     play_response.message = message
+
+    return play_response
+
+def valid_play_response():
+    play_response = PlayResponse(True)
 
     return play_response
 
@@ -104,22 +125,30 @@ class Game(object):
         self.player_hands = deal_player_hands(number_of_cards, players, deck)
         self.players = players
 
-        self.top_card = self.deck.deal_card()
+        self.played_cards = PlayedCards()
+        self.played_cards.add_card(self.deck.deal_card())
+
+        top_card = self.played_cards.top_card
 
         #set direction
-        if self.top_card.rank == Rank.jack:
+        if top_card.rank == Rank.jack:
             self.direction = GameDirection.clockwise
         else:
             self.direction = GameDirection.anticlockwise
 
         #set state machine
         self.state = GameState.NORMAL
-        if self.top_card.rank == Rank.two:
-            self.state = GameState.TWO
-        else if self.top_card.rank == Rank.four:
-            self.state = GameState.FOUR
-        else if self.top_card.rank == Rank.eight:
-            self.state = GameState.EIGHT
+        self.accumulated_count = 0
+
+        if top_card.rank == Rank.two:
+            self.state = GameState.PICK
+            self.accumulated_count = 2
+        elif top_card.rank == Rank.four:
+            self.state = GameState.PICK
+            self.accumulated_count = 4
+        elif top_card.rank == Rank.eight:
+            self.state = GameState.WAIT
+
 
 
     def player_hand(self, player_name):
@@ -151,16 +180,31 @@ class Game(object):
 
         #is move valid
         hand = self.player_hand(current_player.name)
-        if not self.valid_move(move, hand, self.top_card):
+        if not self.valid_move(move, hand, self.played_cards.top_card):
             return invalid_play_response("Not a valid move")
 
+        if move.move_type == MoveType.pick:
+            card_count = 1
+            if self.state == GameState.PICK:
+                card_count = self.accumulated_count
+                self.accumulated_count = 0
+                self.state = GameState.NORMAL
 
-    def valid_pick(self, hand, top_card):
-        #if player hand does not contain same suit or rank it is valid
-        matching_suits = [card for card in hand.cards if card.suit == top_card.suit]
-        matching_values = [card for card in hand.cards if card.rank == top_card.rank]
+            for _ in xrange(card_count):
+                self.pick(hand)
 
-        return not (matching_suits or matching_values) 
+        return valid_play_response()
+            
+
+    def pick(self, hand):
+        if not self.deck.has_card():
+            cards = self.played_cards.return_played_cards()
+            self.deck.add_cards(cards)
+
+            self.deck.shuffle()
+
+        card = self.deck.deal_card()
+        hand.add_card(card)
 
     def valid_play(self, card, hand, top_card):
         #if card is in hand and card is same suit as top_card or rank matches or its a trick card
@@ -174,7 +218,7 @@ class Game(object):
     def valid_move(self, move, hand, top_card):
         #check pick vs play
         if move.move_type == MoveType.pick:
-            return self.valid_pick(hand, top_card)
+            return valid_pick(hand, top_card, self.state)
         
         return self.valid_play(card, player, top_card)
 

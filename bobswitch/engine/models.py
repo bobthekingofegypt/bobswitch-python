@@ -93,6 +93,12 @@ class CardGroup(object):
     def number_of_cards(self):
         return len(self.cards)
 
+    def contains_card(self, card):
+        """
+        Returns True if hand contains passed card
+        """
+        return card in self.cards
+
 
 class Hand(CardGroup):
     """
@@ -101,12 +107,6 @@ class Hand(CardGroup):
 
     def __init__(self):
         super(Hand,self).__init__()
-
-    def contains_card(self, card):
-        """
-        Returns True if hand contains passed card
-        """
-        return card in self.cards
 
     def remove_card(self, card):
         """
@@ -141,15 +141,40 @@ class Deck(CardGroup):
         self.random.shuffle(self.cards)
         self.random.shuffle(self.cards)
 
+    def has_card(self):
+        return self.number_of_cards() != 0
+
     def __repr__(self):
         return "Cards: %r" % (self.cards)
 
 
 
-class PlayedCards(object):
+class PlayedCards(CardGroup):
     """
     represents the played cards
     """
-    pass
+    def __init__(self):
+        super(PlayedCards,self).__init__()
+
+        self.top_card = None
+
+    def add_card(self, card):
+        """
+        adds the given card to the hand
+        """
+        if self.top_card:
+            super(PlayedCards, self).add_card(self.top_card)
+            self.top_card = card
+        else:
+            self.top_card = card
+
+    def return_played_cards(self):
+        old_cards = self.cards
+        self.cards = []
+        return old_cards
+
+
+
+
 
 
