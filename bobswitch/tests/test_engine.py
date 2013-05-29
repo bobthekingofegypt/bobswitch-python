@@ -156,7 +156,7 @@ class TestGame(TestCase):
 
         self.assertEquals(False, play_response.success)
 
-    def test_valid_move(self):
+    def test_valid_move_pick(self):
         player = models.Player("bob")
         player_two = models.Player("john")
 
@@ -166,7 +166,9 @@ class TestGame(TestCase):
 
         game = engine.Game(players, 2, deck)
 
-        play_response = game.play("bob", None)
+        move = engine.GameMove(engine.MoveType.pick)
 
-        self.assertEquals(False, play_response.success)
+        play_response = game.play("bob", move)
+
+        self.assertEquals(True, play_response.success)
 

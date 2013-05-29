@@ -10,6 +10,17 @@ class MoveType(Enum):
     play = 1
 
 
+class GameState(Enum):
+    NORMAL = 0
+    TWO = 1
+    FOUR = 2
+    EIGHT = 3
+
+class GameDirection(Enum):
+    clockwise = 0
+    anticlockwise = 1
+
+
 def create_deck():
     """
     Returns a deck populated with the standard 52 cards from a plain deck
@@ -75,6 +86,16 @@ class PlayResponse(object):
 
 
 class Game(object):
+
+    """
+    create state machine for game state
+    NORMAL
+    TWO
+    FOUR
+    EIGHT
+
+    two, four and eight are blocking states
+    """
     
     def __init__(self, players, number_of_cards, deck, starting_player=1):
         self.deck = deck 
@@ -84,6 +105,22 @@ class Game(object):
         self.players = players
 
         self.top_card = self.deck.deal_card()
+
+        #set direction
+        if self.top_card.rank == Rank.jack:
+            self.direction = GameDirection.clockwise
+        else:
+            self.direction = GameDirection.anticlockwise
+
+        #set state machine
+        self.state = GameState.NORMAL
+        if self.top_card.rank == Rank.two:
+            self.state = GameState.TWO
+        else if self.top_card.rank == Rank.four:
+            self.state = GameState.FOUR
+        else if self.top_card.rank == Rank.eight:
+            self.state = GameState.EIGHT
+
 
     def player_hand(self, player_name):
         """
@@ -108,24 +145,38 @@ class Game(object):
         """
         Take a move, validate it and respond back with a response
         """
-        current_player = self.players[self.current_player]
+        current_player = self.players[self.current_player-1]
         if current_player.name != player_name:
             return invalid_play_response(("Not player %s's turn" % (player_name,)))
 
         #is move valid
-        if not self._valid_move(move, current_player):
+        hand = self.player_hand(current_player.name)
+        if not self.valid_move(move, hand, self.top_card):
             return invalid_play_response("Not a valid move")
 
 
-    def _valid_pick(self, player, top_card):
-        return False
+    def valid_pick(self, hand, top_card):
+        #if player hand does not contain same suit or rank it is valid
+        matching_suits = [card for card in hand.cards if card.suit == top_card.suit]
+        matching_values = [card for card in hand.cards if card.rank == top_card.rank]
 
-    def _valid_move(self, move, player, top_card):
+        return not (matching_suits or matching_values) 
+
+    def valid_play(self, card, hand, top_card):
+        #if card is in hand and card is same suit as top_card or rank matches or its a trick card
+        if not hand.contains_card(move.card): 
+            return False
+
+        #if not in trick card state
+        #if card.rank == top_card.rank
+        return True
+
+    def valid_move(self, move, hand, top_card):
         #check pick vs play
         if move.move_type == MoveType.pick:
-            return _valid_pick(player, top_card)
+            return self.valid_pick(hand, top_card)
         
-        return False
+        return self.valid_play(card, player, top_card)
 
          
 
