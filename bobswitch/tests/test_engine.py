@@ -7,7 +7,7 @@ def populate_known_deck():
     deck = models.Deck(None)
     deck.add_card(models.Card(models.Suit.clubs, models.Rank.seven))
     deck.add_card(models.Card(models.Suit.clubs, models.Rank.five))
-    deck.add_card(models.Card(models.Suit.clubs, models.Rank.four))
+    deck.add_card(models.Card(models.Suit.clubs, models.Rank.six))
     deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
     deck.add_card(models.Card(models.Suit.clubs, models.Rank.two))
     deck.add_card(models.Card(models.Suit.clubs, models.Rank.king))
@@ -738,3 +738,44 @@ class TestGame(TestCase):
 
         self.assertEquals(2, game.current_player)
         self.assertEquals(engine.GameDirection.anticlockwise, game.direction)
+
+    def test_get_state(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+        player_three = models.Player("scott")
+
+        players = [player, player_two, player_three,]
+
+        deck = populate_known_deck()
+
+        game = engine.Game(players, 2, deck)
+
+        status = game.status()
+
+        self.assertEquals(1, status.current_player)
+        self.assertEquals(models.Card(models.Suit.clubs, models.Rank.six), status.top_card)
+        self.assertEquals([2,2,2], status.counts)
+
+    def test_get_state_after_play(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+        player_three = models.Player("scott")
+
+        players = [player, player_two, player_three,]
+
+        deck = populate_known_deck()
+
+        game = engine.Game(players, 2, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.clubs, models.Rank.ten))
+
+        play_response = game.play("bob", move)
+        
+        status = game.status()
+
+        self.assertTrue(play_response.success)
+        self.assertEquals(2, status.current_player)
+        self.assertEquals(models.Card(models.Suit.clubs, models.Rank.ten), status.top_card)
+        self.assertEquals([1,2,2], status.counts)
+

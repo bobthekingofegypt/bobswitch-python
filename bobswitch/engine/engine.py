@@ -126,18 +126,16 @@ class PlayResponse(object):
         self.message = ""
 
 
+class GameStatus(object):
+
+    def __init__(self, current_player, top_card, counts):
+        self.current_player = current_player
+        self.top_card = top_card
+        self.counts = counts
+
+
 class Game(object):
 
-    """
-    create state machine for game state
-    NORMAL
-    TWO
-    FOUR
-    EIGHT
-
-    two, four and eight are blocking states
-    """
-    
     def __init__(self, players, number_of_cards, deck, starting_player=1):
         self.deck = deck 
 
@@ -180,18 +178,14 @@ class Game(object):
         """
         return self.player_hands[player_name].hand
 
-    def state(self):
+    def status(self):
         """
-        Return the state of the game
+        Return the status of the game
         """
+        player_counts = [player_hand.hand.number_of_cards() for _, player_hand 
+                in self.player_hands.items()]
 
-        #game state
-        """
-        whose turn it is
-        top card
-        player counts
-        """
-        pass
+        return GameStatus(self.current_player, self.played_cards.top_card, player_counts)
 
     def play(self, player_name, move):
         """
