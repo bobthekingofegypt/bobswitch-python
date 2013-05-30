@@ -8,6 +8,7 @@ from flufl.enum import Enum
 class MoveType(Enum):
     pick = 0
     play = 1
+    wait = 2
 
 
 class GameState(Enum):
@@ -65,6 +66,25 @@ def valid_pick(hand, top_card, game_state):
             or card.rank == Rank.ace]
 
     return not (matching_cards) 
+
+def valid_play(card, hand, top_card, game_state):
+    if game_state == GameState.WAIT and card.rank != Rank.eight:
+        return False
+
+    if game_state == GameState.PICK:
+        if top_card.rank != card.rank:
+            return False
+
+    if not hand.contains_card(card): 
+        return False
+
+    if card.rank == Rank.ace:
+        return True
+
+    if card.rank == top_card.rank or card.suit == top_card.suit:
+        return True
+
+    return False 
 
 
 class PlayerHand(object):
@@ -131,24 +151,27 @@ class Game(object):
         top_card = self.played_cards.top_card
 
         #set direction
+        self.direction = GameDirection.clockwise
         if top_card.rank == Rank.jack:
-            self.direction = GameDirection.clockwise
-        else:
-            self.direction = GameDirection.anticlockwise
+            self.set_next_player(top_card, True)
 
         #set state machine
-        self.state = GameState.NORMAL
         self.accumulated_count = 0
+        self.update_state(top_card)
 
-        if top_card.rank == Rank.two:
+    def update_state(self, card):
+        if card.rank == Rank.two:
             self.state = GameState.PICK
-            self.accumulated_count = 2
-        elif top_card.rank == Rank.four:
+            self.accumulated_count = self.accumulated_count + 2
+        elif card.rank == Rank.four:
             self.state = GameState.PICK
-            self.accumulated_count = 4
-        elif top_card.rank == Rank.eight:
+            self.accumulated_count = self.accumulated_count + 4
+        elif card.rank == Rank.eight:
             self.state = GameState.WAIT
-
+            self.accumulated_count = 0
+        else:
+            self.state = GameState.NORMAL
+            self.accumulated_count = 0
 
 
     def player_hand(self, player_name):
@@ -192,9 +215,38 @@ class Game(object):
 
             for _ in xrange(card_count):
                 self.pick(hand)
+        elif move.move_type == MoveType.play:
+            hand.remove_card(move.card)
+            self.played_cards.add_card(move.card)
+            self.update_state(move.card)
+
+        self.set_next_player(move.card)
 
         return valid_play_response()
             
+    def set_next_player(self, card, start_move=False):
+        #in two player jack means play again, except on deal when other player should play
+        if len(self.players) == 2 and card and card.rank == Rank.jack and not start_move:
+            return
+
+        if card and card.rank == Rank.jack:
+            if self.direction == GameDirection.clockwise:
+                self.direction = GameDirection.anticlockwise
+            else:
+                self.direction = GameDirection.clockwise
+
+        if self.direction == GameDirection.clockwise:
+            if self.current_player == len(self.players):
+                self.current_player = 1
+            else:
+                self.current_player = self.current_player+1
+        else:
+            if self.current_player == 1:
+                self.current_player = len(self.players)
+            else:
+                self.current_player = self.current_player-1
+
+
 
     def pick(self, hand):
         if not self.deck.has_card():
@@ -206,21 +258,13 @@ class Game(object):
         card = self.deck.deal_card()
         hand.add_card(card)
 
-    def valid_play(self, card, hand, top_card):
-        #if card is in hand and card is same suit as top_card or rank matches or its a trick card
-        if not hand.contains_card(move.card): 
-            return False
-
-        #if not in trick card state
-        #if card.rank == top_card.rank
-        return True
 
     def valid_move(self, move, hand, top_card):
         #check pick vs play
         if move.move_type == MoveType.pick:
             return valid_pick(hand, top_card, self.state)
         
-        return self.valid_play(card, player, top_card)
+        return valid_play(move.card, hand, top_card, self.state)
 
          
 

@@ -153,6 +153,115 @@ class TestValidPlays(TestCase):
 
         self.assertFalse(engine.valid_pick(hand, top_card, engine.GameState.WAIT))
 
+    def test_play_when_in_wait(self):
+        hand = engine.Hand()
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.four))
+
+        top_card = models.Card(models.Suit.clubs, models.Rank.eight)
+
+        card = models.Card(models.Suit.clubs, models.Rank.four)
+
+        self.assertFalse(engine.valid_play(card, hand, top_card, engine.GameState.WAIT))
+
+    def test_play_with_eight_when_in_wait(self):
+        hand = engine.Hand()
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        hand.add_card(models.Card(models.Suit.hearts, models.Rank.eight))
+
+        top_card = models.Card(models.Suit.clubs, models.Rank.eight)
+
+        card = models.Card(models.Suit.hearts, models.Rank.eight)
+
+        self.assertTrue(engine.valid_play(card, hand, top_card, engine.GameState.WAIT))
+
+    def test_play_non_two_when_in_pick_with_two(self):
+        hand = engine.Hand()
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.four))
+
+        top_card = models.Card(models.Suit.clubs, models.Rank.two)
+
+        card = models.Card(models.Suit.clubs, models.Rank.four)
+
+        self.assertFalse(engine.valid_play(card, hand, top_card, engine.GameState.PICK))
+
+    def test_play_two_when_in_pick_with_two(self):
+        hand = engine.Hand()
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        hand.add_card(models.Card(models.Suit.diamonds, models.Rank.two))
+
+        top_card = models.Card(models.Suit.clubs, models.Rank.two)
+
+        card = models.Card(models.Suit.diamonds, models.Rank.two)
+
+        self.assertTrue(engine.valid_play(card, hand, top_card, engine.GameState.PICK))
+
+    def test_play_non_four_when_in_pick_with_four(self):
+        hand = engine.Hand()
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.four))
+
+        top_card = models.Card(models.Suit.clubs, models.Rank.four)
+
+        card = models.Card(models.Suit.clubs, models.Rank.ace)
+
+        self.assertFalse(engine.valid_play(card, hand, top_card, engine.GameState.PICK))
+
+    def test_play_four_when_in_pick_with_four(self):
+        hand = engine.Hand()
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        hand.add_card(models.Card(models.Suit.diamonds, models.Rank.four))
+
+        top_card = models.Card(models.Suit.clubs, models.Rank.four)
+
+        card = models.Card(models.Suit.diamonds, models.Rank.four)
+
+        self.assertTrue(engine.valid_play(card, hand, top_card, engine.GameState.PICK))
+
+    def test_play_card_not_in_hand(self):
+        hand = engine.Hand()
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        hand.add_card(models.Card(models.Suit.diamonds, models.Rank.four))
+
+        top_card = models.Card(models.Suit.clubs, models.Rank.four)
+
+        card = models.Card(models.Suit.spades, models.Rank.four)
+
+        self.assertFalse(engine.valid_play(card, hand, top_card, engine.GameState.NORMAL))
+
+    def test_play_card_same_suit(self):
+        hand = engine.Hand()
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        hand.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+
+        top_card = models.Card(models.Suit.diamonds, models.Rank.seven)
+
+        card = models.Card(models.Suit.diamonds, models.Rank.six)
+
+        self.assertTrue(engine.valid_play(card, hand, top_card, engine.GameState.NORMAL))
+
+    def test_play_card_same_rank(self):
+        hand = engine.Hand()
+        hand.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        hand.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+
+        top_card = models.Card(models.Suit.clubs, models.Rank.six)
+
+        card = models.Card(models.Suit.diamonds, models.Rank.six)
+
+        self.assertTrue(engine.valid_play(card, hand, top_card, engine.GameState.NORMAL))
+
+    def test_play_ace(self):
+        hand = engine.Hand()
+        hand.add_card(models.Card(models.Suit.hearts, models.Rank.ace))
+        hand.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+
+        top_card = models.Card(models.Suit.clubs, models.Rank.six)
+
+        card = models.Card(models.Suit.hearts, models.Rank.ace)
+
+        self.assertTrue(engine.valid_play(card, hand, top_card, engine.GameState.NORMAL))
 
 class TestGame(TestCase):
 
@@ -377,3 +486,255 @@ class TestGame(TestCase):
 
         self.assertTrue(deck.shuffle.called)
 
+    def test_invalid_move_play_card_not_present_in_hand(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.seven))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.five))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.six))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.two))
+
+        game = engine.Game(players, 1, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.diamonds, models.Rank.three))
+
+        play_response = game.play("bob", move)
+
+        self.assertEquals(False, play_response.success)
+
+    def test_invalid_move_play_card_wrong_suit(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.seven))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.five))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.six))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.two))
+
+        game = engine.Game(players, 1, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.diamonds, models.Rank.two))
+
+        play_response = game.play("bob", move)
+
+        self.assertEquals(False, play_response.success)
+
+    def test_valid_move_play_same_rank(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.seven))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.five))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.six))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.seven))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.five))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+
+        game = engine.Game(players, 2, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.diamonds, models.Rank.six))
+
+        play_response = game.play("bob", move)
+
+        self.assertTrue(play_response.success)
+        self.assertEquals(1, game.player_hand("bob").number_of_cards())
+        self.assertEquals(1, game.played_cards.number_of_cards())
+        self.assertEquals(models.Card(models.Suit.diamonds, models.Rank.six), 
+                    game.played_cards.top_card)
+
+
+    def test_valid_move_play_eight(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.seven))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.five))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.eight))
+
+        game = engine.Game(players, 2, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.diamonds, models.Rank.eight))
+
+        play_response = game.play("bob", move)
+
+        self.assertTrue(play_response.success)
+        self.assertEquals(1, game.player_hand("bob").number_of_cards())
+        self.assertEquals(1, game.played_cards.number_of_cards())
+        self.assertEquals(models.Card(models.Suit.diamonds, models.Rank.eight), 
+                    game.played_cards.top_card)
+        self.assertEquals(engine.GameState.WAIT, game.state)
+
+    def test_valid_move_play_two(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.seven))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.five))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.two))
+
+        game = engine.Game(players, 2, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.diamonds, models.Rank.two))
+
+        play_response = game.play("bob", move)
+
+        self.assertTrue(play_response.success)
+        self.assertEquals(1, game.player_hand("bob").number_of_cards())
+        self.assertEquals(1, game.played_cards.number_of_cards())
+        self.assertEquals(models.Card(models.Suit.diamonds, models.Rank.two), 
+                    game.played_cards.top_card)
+        self.assertEquals(engine.GameState.PICK, game.state)
+
+    def test_valid_move_player_changes(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.seven))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.five))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.two))
+
+        game = engine.Game(players, 2, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.diamonds, models.Rank.two))
+
+        play_response = game.play("bob", move)
+
+        self.assertEquals(2, game.current_player)
+
+    def test_valid_move_player_wraps(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.seven))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.five))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.three))
+
+        game = engine.Game(players, 2, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.diamonds, models.Rank.three))
+
+        play_response = game.play("bob", move)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.clubs, models.Rank.three))
+
+        play_response = game.play("john", move)
+        
+        self.assertEquals(1, game.current_player)
+
+    def test_valid_move_jack_allows_second_shot_with_two_players(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.jack))
+
+        game = engine.Game(players, 1, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.diamonds, models.Rank.jack))
+
+        play_response = game.play("bob", move)
+
+        self.assertEquals(1, game.current_player)
+
+    def test_valid_move_jack_reverse_order_with_three_players(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+        player_three = models.Player("scott")
+
+        players = [player, player_two, player_three,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.jack))
+
+        game = engine.Game(players, 1, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.diamonds, models.Rank.jack))
+
+        play_response = game.play("bob", move)
+
+        self.assertEquals(3, game.current_player)
+        self.assertEquals(engine.GameDirection.anticlockwise, game.direction)
+
+    def test_valid_move_jack_reverse_starting_player(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+        player_three = models.Player("scott")
+
+        players = [player, player_two, player_three,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.jack))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.jack))
+
+        game = engine.Game(players, 1, deck)
+
+        self.assertEquals(3, game.current_player)
+        self.assertEquals(engine.GameDirection.anticlockwise, game.direction)
+    
+    def test_valid_move_jack_reverse_starting_player_with_two(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two,]
+
+        deck = models.Deck(None)
+        deck.add_card(models.Card(models.Suit.hearts, models.Rank.jack))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.three))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.jack))
+
+        game = engine.Game(players, 1, deck)
+
+        self.assertEquals(2, game.current_player)
+        self.assertEquals(engine.GameDirection.anticlockwise, game.direction)
