@@ -1,8 +1,7 @@
-Flask==0.9
-Jinja2==2.6
-Werkzeug==0.8.3
 coverage==3.6
 flufl.enum==3.3.2
 nose==1.2.1
 unittest2==0.5.1
 wsgiref==0.1.2
+tornado==3.1.1
+sockjs-tornado==1.0.0
