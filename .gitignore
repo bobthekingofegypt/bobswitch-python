@@ -38,3 +38,4 @@ venv
 .idea
 tags
 cscope.out
+htmlcov
