@@ -16,12 +16,11 @@ namespace :test do
     # Handy alias for the forgetful:
     task :cover => :coverage
 
-    namespace :coverage do
-        desc "Generate an HTML report"
-        task :html do
-            sh "./env/bin/coverage html"
-            puts "Generated report at htmlcov/index.html"
-        end
+    desc "Generate an HTML report"
+    task :html do
+        sh "coverage run --source=bobswitch bobswitch/tests/__main__.py"
+        sh "coverage html"
+        puts "Generated report at htmlcov/index.html"
     end
 end
 
