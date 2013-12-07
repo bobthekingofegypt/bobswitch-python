@@ -13,6 +13,13 @@
 
 from inspect import ismethod, getmembers
 
+import sockjs.tornado
+import json
+
+import logging
+
+logger = logging.getLogger()
+
 def event(name_or_func):
     """Event handler decorator.
 
@@ -52,3 +59,33 @@ class EventMagicMeta(type):
         # Call base
         super(EventMagicMeta, cls).__init__(name, bases, attrs)
 
+
+class EventSocketConnection(sockjs.tornado.SockJSConnection):
+    """
+    ``EventSocketConnection`` has useful ``event`` decorator. Wrap method with it::
+
+        class MyConnection(EventSocketConnection):
+            @event('test')
+            def test(self, msg):
+                print msg
+
+    and then, when client will emit 'test' event, you should see 'Hello World' printed::
+
+        sock.emit('test', {msg:'Hello World'});
+
+    """
+    __metaclass__ = EventMagicMeta
+
+    def on_message(self, message):
+        decoded_json = json.loads(message)
+        name = decoded_json["name"];
+        handler = self._events.get(name)
+
+        if handler:
+            message = None
+            if "message" in decoded_json:
+                message = decoded_json["message"]
+
+            return handler(self, message)
+        else:
+            logger.error('Invalid event name: %s' % name)
