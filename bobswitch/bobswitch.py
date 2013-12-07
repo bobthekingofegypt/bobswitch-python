@@ -34,6 +34,7 @@ class SocketConnection(EventSocketConnection):
 
     @event("chat:message")
     def chat_message(self, message):
+        self.broadcast_event(self.participants, "chat:message", message)
         print message
 
 if __name__ == "__main__":
@@ -43,7 +44,7 @@ if __name__ == "__main__":
     BobSwitchRouter = sockjs.tornado.SockJSRouter(SocketConnection, '/bobswitch')
 
     app = tornado.web.Application(
-            ChatRouter.urls,
+            BobSwitchRouter.urls,
             debug=True
     )
 
