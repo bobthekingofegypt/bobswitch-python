@@ -1,3 +1,16 @@
+# -*- coding: utf-8 -*-
+"""
+    Socket
+    ~~~~~~~~~~~~
+
+    Contains a subclass of the socks tornado Socket class that
+    implements the use of event decorators on your SockJSConnection.
+
+    This code is all based on the event mechanism from tornadio2
+    https://github.com/MrJoes/tornadio2
+    license is contained in the licenses folder
+"""
+
 from inspect import ismethod, getmembers
 
 def event(name_or_func):
