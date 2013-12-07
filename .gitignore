@@ -35,3 +35,6 @@ nosetests.xml
 .pydevproject
 
 venv
+.idea
+tags
+cscope.out

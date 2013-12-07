@@ -1,4 +1,5 @@
-from engine import engine, models
+from bobswitch import engine
+from bobswitch import models
 from unittest2 import TestCase, main, skip
 from mock import Mock
 

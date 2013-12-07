@@ -4,13 +4,13 @@ require 'rake/clean'
 
 namespace :test do
     task :test do
-        sh "python tests/__main__.py"
+        sh "python bobswitch/tests/__main__.py"
     end
 
     desc "Run unittests and report coverage."
     task :coverage do
-        sh "coverage run tests/__main__.py"
-        sh "coverage report --omit='../venv/**,tests/*.py' --fail-under=37"
+        sh "coverage run --source=bobswitch bobswitch/tests/__main__.py"
+        sh "coverage report --omit='venv/**,bobswitch/tests/*.py' --fail-under=37"
     end
 
     # Handy alias for the forgetful:

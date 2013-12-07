@@ -2,7 +2,7 @@ import random
 
 from unittest2 import TestCase, main, skip
 
-from engine import models
+from bobswitch import models
 
 class TestPlayer(TestCase):
 

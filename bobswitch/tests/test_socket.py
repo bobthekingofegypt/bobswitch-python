@@ -1,6 +1,6 @@
 from unittest2 import TestCase, main, skip
 
-from server.socket import event, EventMagicMeta
+from bobswitch.socket import event, EventMagicMeta
 
 class TestMeta(TestCase):
 
