@@ -34,8 +34,14 @@ class SocketConnection(EventSocketConnection):
 
     @event("chat:message")
     def chat_message(self, message):
-        self.broadcast_event(self.participants, "chat:message", message)
+        self.broadcast_event(self.participants, "chat:message", self.name + message)
         print message
+
+    @event("account:login")
+    def login(self, message):
+        self.name = message
+        self.broadcast_event(self.participants, "chat:message", message + " has joined")
+
 
 if __name__ == "__main__":
     import logging
