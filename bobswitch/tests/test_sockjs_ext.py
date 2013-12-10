@@ -129,3 +129,19 @@ class TestMeta(TestCase):
         
         self.assertTrue(called["called"])
         self.assertEquals(None, called["message"])
+
+    def test_send_event(self):
+        called = {"message": None,} 
+
+        class TestMessage(EventSocketConnection):
+            def send(self, message):
+                called["message"] = message
+                
+        test_message = TestMessage(None)
+
+        test_message.send_event("bob", "hello")
+
+        self.assertEquals('{"message": "hello", "type": "event", "name": "bob"}', called["message"])
+
+
+

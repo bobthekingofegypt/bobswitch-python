@@ -16,45 +16,61 @@ import engine
 
 from sockjs_ext import EventSocketConnection, event
 
+import logging
+log = logging.getLogger()
+
+def wrap_chat_message(name, message):
+    return {
+        "name": name,
+        "text": message
+    }
+
 
 class SocketConnection(EventSocketConnection):
     participants = set()
 
     def on_open(self, info):
-        #self.broadcast(self.participants, "Someone joined.")
+        #user remains annonymous until they register, so they get no name
         self.name = None 
 
-        # Add client to the clients list
         self.participants.add(self)
 
     def on_close(self):
-        # Remove client from the clients list and broadcast leave message
         self.participants.remove(self)
 
-        #self.broadcast(self.participants, "Someone left.")
+
+    ########
+    # chat functions
+    ########
 
     @event("chat:message")
     def chat_message(self, message):
-        c = {
-            "name": self.name,
-            "text": message
-        }
-        self.broadcast_event(self.participants, "chat:message", c)
-        print message
+        log.debug("Chat message recieved: %s: %s", self.name, message)
+
+        wrapped_message = wrap_chat_message(self.name, message)
+        self.broadcast_event(self.participants, "chat:message", wrapped_message)
+
+
+
+    ########
+    # account functions
+    ########
 
     @event("account:login")
-    def login(self, message):
-        self.name = message
-        #self.broadcast_event(self.participants, "chat:message", message + " has joined")
-        self.broadcast_event(self.participants, "players:added", message)
+    def login(self, name):
+        log.debug("user '%s' logged in", name)
+
+        self.name = name 
+        self.broadcast_event(self.participants, "players:added", name)
 
     @event("account:listing")
     def listing(self, message):
-        print "ACCOUNT LISTING"
-        #names = ', '.join(s.name for s in self.participants if s.name is not None)
+        log.debug("request for registered users")
+
+        #client only expects registered names to be returned
         names = [s.name for s in self.participants if s.name is not None]
         self.send_event("players:listing", names)
-        #self.broadcast_event(self.participants, "chat:message", message + " has joined")
+
 
 if __name__ == "__main__":
     import logging
