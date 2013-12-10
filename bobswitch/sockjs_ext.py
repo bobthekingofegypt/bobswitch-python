@@ -90,6 +90,16 @@ class EventSocketConnection(sockjs.tornado.SockJSConnection):
         else:
             logger.error('Invalid event name: %s' % name)
 
+    def send_event(self, name, message):
+
+        data = {
+            "type": "event",
+            "name": name,
+            "message": message
+        }
+
+        self.send(json.dumps(data))
+
     def broadcast_event(self, participants, name, message):
 
         data = {
