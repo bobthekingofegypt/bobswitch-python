@@ -80,8 +80,11 @@ class TestSocketConnection(TestCase):
         args, kargs = sc.send_event.call_args
         key, listing = args
         self.assertEquals("players:listing", key)
-        self.assertEquals("Scott",listing[0]["name"])
-        self.assertEquals("bob",listing[1]["name"])
+
+        names = [s["name"] for s in listing if s["name"] is not None]
+
+        self.assertTrue("Scott" in names)
+        self.assertTrue("bob" in names)
 
     
 
