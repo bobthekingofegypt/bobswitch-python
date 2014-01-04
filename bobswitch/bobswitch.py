@@ -12,8 +12,10 @@
 
 import tornado.ioloop
 import sockjs.tornado
-import engine
 
+from json_convert import convert_hand
+from engine import create_deck, Game
+from models import Player
 from sockjs_ext import EventSocketConnection, event
 
 import logging
@@ -25,6 +27,14 @@ def wrap_chat_message(name, message):
         "text": message
     }
 
+def create_game(names):
+    players = [Player(name) for name in names]
+    deck = create_deck()
+    
+    game = Game(players, 7, deck)
+
+    return game
+
 
 class SocketConnection(EventSocketConnection):
     participants = set()
@@ -32,6 +42,7 @@ class SocketConnection(EventSocketConnection):
     def on_open(self, info):
         #user remains annonymous until they register, so they get no name
         self.name = None 
+        self.ready = False
 
         self.participants.add(self)
 
@@ -68,8 +79,32 @@ class SocketConnection(EventSocketConnection):
         log.debug("request for registered users")
 
         #client only expects registered names to be returned
-        names = [s.name for s in self.participants if s.name is not None]
+        names = [{"name":s.name, "ready":s.ready} for s in self.participants if s.name is not None]
+
         self.send_event("players:listing", names)
+
+    
+    #######
+    # game functions
+    #######
+
+    @event("game:player:ready")
+    def player_ready(self, message):
+        log.debug("%s ready to start game", self.name)
+        
+        self.ready = True
+
+        self.broadcast_event(self.participants, "game:player:ready", self.name)
+
+        #start the game
+        #send the game initial state to all players
+        names = [s.name for s in self.participants if s.name is not None]
+
+        game = create_game(names)
+
+        for participant in self.participants:
+            hand = game.player_hand(participant.name)
+            participant.send_event("test", convert_hand(hand))
 
 
 if __name__ == "__main__":
