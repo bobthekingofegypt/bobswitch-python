@@ -101,7 +101,9 @@ class SocketConnection(EventSocketConnection):
         all_ready = all([s.ready and s.name is not None 
                             for s in self.participants])
 
-        if not all_ready:
+        player_count = len(self.participants)
+        enough_players = player_count > 1 and player_count < 5
+        if not all_ready or not enough_players:
             return
 
         #start the game

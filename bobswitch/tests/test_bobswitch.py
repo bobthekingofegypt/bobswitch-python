@@ -135,3 +135,16 @@ class TestSocketConnection(TestCase):
         self.assertEquals("game:state:start", key)
         self.assertEquals(2, state["number_of_players"])
         self.assertEquals(7, len(state["hand"]))
+
+    def test_player_ready_only_one(self):
+        sc = bobswitch.SocketConnection("")
+        sc.on_open(None)
+        sc.name = "bob"
+
+        sc.broadcast_event = MagicMock()
+        sc.send_event = MagicMock()
+        sc.player_ready(None)
+        sc.broadcast_event.assert_called_with(sc.participants, 
+                "game:player:ready", "bob")
+        
+        self.assertFalse(sc.send_event.called)
