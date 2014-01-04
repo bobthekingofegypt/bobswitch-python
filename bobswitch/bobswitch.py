@@ -3,8 +3,9 @@
     BobSwitch 
     ~~~~~~~~~~~~~~
 
-    Online HTML5 version of the backpackers card game switch, also known as crazy eights 
-    and a lot of different names.  This version follows the rules that I know.
+    Online HTML5 version of the backpackers card game switch, also known as 
+    crazy eights and a lot of different names.  This version follows the rules
+    that I know.
 
     :copyright: (c) Copyright 2013 by Bob
     :license: BSD, see LICENSE for more details.
@@ -13,7 +14,7 @@
 import tornado.ioloop
 import sockjs.tornado
 
-from json_convert import convert_hand
+from json_convert import convert_hand, convert_state_start
 from engine import create_deck, Game
 from models import Player
 from sockjs_ext import EventSocketConnection, event
@@ -79,7 +80,8 @@ class SocketConnection(EventSocketConnection):
         log.debug("request for registered users")
 
         #client only expects registered names to be returned
-        names = [{"name":s.name, "ready":s.ready} for s in self.participants if s.name is not None]
+        names = [{"name":s.name, "ready":s.ready} 
+                for s in self.participants if s.name is not None]
 
         self.send_event("players:listing", names)
 
@@ -96,6 +98,12 @@ class SocketConnection(EventSocketConnection):
 
         self.broadcast_event(self.participants, "game:player:ready", self.name)
 
+        all_ready = all([s.ready and s.name is not None 
+                            for s in self.participants])
+
+        if not all_ready:
+            return
+
         #start the game
         #send the game initial state to all players
         names = [s.name for s in self.participants if s.name is not None]
@@ -104,14 +112,16 @@ class SocketConnection(EventSocketConnection):
 
         for participant in self.participants:
             hand = game.player_hand(participant.name)
-            participant.send_event("test", convert_hand(hand))
+            participant.send_event("game:state:start", 
+                    convert_state_start(len(game.players), hand))
 
 
 if __name__ == "__main__":
     import logging
     logging.getLogger().setLevel(logging.DEBUG)
 
-    BobSwitchRouter = sockjs.tornado.SockJSRouter(SocketConnection, '/bobswitch')
+    BobSwitchRouter = sockjs.tornado.SockJSRouter(SocketConnection, 
+            '/bobswitch')
 
     app = tornado.web.Application(
             BobSwitchRouter.urls,

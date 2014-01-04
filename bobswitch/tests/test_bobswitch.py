@@ -25,6 +25,9 @@ class TestMeta(TestCase):
 
 class TestSocketConnection(TestCase):
 
+    def setUp(self):
+        bobswitch.SocketConnection.participants = set()
+
     def test_on_open(self):
         sc = bobswitch.SocketConnection("")
         sc.on_open(None)
@@ -73,7 +76,6 @@ class TestSocketConnection(TestCase):
         sc2.on_open(None)
         sc2.name = "Scott"
 
-
         sc.send_event = MagicMock()
         sc.listing(None)
 
@@ -86,5 +88,50 @@ class TestSocketConnection(TestCase):
         self.assertTrue("Scott" in names)
         self.assertTrue("bob" in names)
 
-    
+    def test_player_ready_not_all_ready(self):
+        sc = bobswitch.SocketConnection("")
+        sc.on_open(None)
+        sc.name = "bob"
 
+        sc2 = bobswitch.SocketConnection("")
+        sc2.on_open(None)
+        sc2.name = "Scott"
+    
+        sc.broadcast_event = MagicMock()
+        sc.send_event = MagicMock()
+        sc.player_ready(None)
+        sc.broadcast_event.assert_called_with(sc.participants, 
+                "game:player:ready", "bob")
+
+        self.assertFalse(sc.send_event.called)
+
+    def test_player_ready_all_ready(self):
+        sc = bobswitch.SocketConnection("")
+        sc.on_open(None)
+        sc.name = "bob"
+
+        sc2 = bobswitch.SocketConnection("")
+        sc2.on_open(None)
+        sc2.name = "Scott"
+        sc2.ready = True
+    
+        sc.broadcast_event = MagicMock()
+        sc.send_event = MagicMock()
+        sc2.send_event = MagicMock()
+
+        sc.player_ready(None)
+
+        sc.broadcast_event.assert_called_with(sc.participants, 
+                "game:player:ready", "bob")
+
+        args, kargs = sc.send_event.call_args
+        key, state = args
+        self.assertEquals("game:state:start", key)
+        self.assertEquals(2, state["number_of_players"])
+        self.assertEquals(7, len(state["hand"]))
+
+        args, kargs = sc2.send_event.call_args
+        key, state = args
+        self.assertEquals("game:state:start", key)
+        self.assertEquals(2, state["number_of_players"])
+        self.assertEquals(7, len(state["hand"]))
