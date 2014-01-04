@@ -44,6 +44,7 @@ class SocketConnection(EventSocketConnection):
         #user remains annonymous until they register, so they get no name
         self.name = None 
         self.ready = False
+        self.position = len(self.participants)
 
         self.participants.add(self)
 
@@ -115,7 +116,8 @@ class SocketConnection(EventSocketConnection):
         for participant in self.participants:
             hand = game.player_hand(participant.name)
             participant.send_event("game:state:start", 
-                    convert_state_start(len(game.players), hand))
+                    convert_state_start(game.players, game.current_player,
+                        game.played_cards.top_card, hand))
 
 
 if __name__ == "__main__":

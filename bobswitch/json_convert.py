@@ -5,9 +5,14 @@ def convert_card(card):
 def convert_hand(hand):
     return [convert_card(card) for card in hand.cards]
 
-def convert_state_start(number_of_players, hand):
+def convert_state_start(players, starting_player, top_card, hand):
+    players = [player.name for player in players]
+
     return {
-        "number_of_players": number_of_players,
-        "hand": convert_hand(hand)
+        "players": players,
+        "starting_player": starting_player,
+        "number_of_players": len(players),
+        "hand": convert_hand(hand),
+        "top_card": convert_card(top_card)
     }
 

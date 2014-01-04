@@ -36,8 +36,17 @@ class TestConvert(TestCase):
         hand.add_card(card)
         hand.add_card(card2)
 
-        state_converted = json_convert.convert_state_start(2, hand)
+        top = models.Card(models.Suit.spades, models.Rank.ace)
+
+        players = [models.Player("bob"), models.Player("scott")]
+
+        state_converted = json_convert.convert_state_start(players,
+                                1, top, hand)
 
         self.assertEquals(2, state_converted["number_of_players"])
         self.assertEquals(2, len(state_converted["hand"]))
         self.assertEquals(0, state_converted["hand"][0]["suit"])
+        self.assertEquals(1, state_converted["starting_player"])
+        self.assertEquals(3, state_converted["top_card"]["suit"])
+        self.assertEquals(1, state_converted["top_card"]["rank"])
+        self.assertEquals(["bob", "scott"], state_converted["players"])
