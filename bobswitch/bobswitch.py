@@ -31,6 +31,7 @@ def wrap_chat_message(name, message):
 def create_game(names):
     players = [Player(name) for name in names]
     deck = create_deck()
+    deck.shuffle()
     
     game = Game(players, 7, deck)
 
@@ -120,6 +121,11 @@ class SocketConnection(EventSocketConnection):
                         game.played_cards.top_card, hand))
 
 
+class ClearHandler(tornado.web.RequestHandler):
+    def get(self):
+        print SocketConnection.participants.clear()
+
+
 if __name__ == "__main__":
     import logging
     logging.getLogger().setLevel(logging.DEBUG)
@@ -133,5 +139,10 @@ if __name__ == "__main__":
     )
 
     app.listen(8080)
+
+    debug_application = tornado.web.Application([
+        (r"/clear", ClearHandler),
+    ])                    
+    debug_application.listen(9433)
 
     tornado.ioloop.IOLoop.instance().start()
