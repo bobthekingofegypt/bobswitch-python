@@ -14,9 +14,9 @@
 import tornado.ioloop
 import sockjs.tornado
 
-from json_convert import convert_hand, convert_state_start
-from engine import create_deck, Game
-from models import Player
+from json_convert import convert_hand, convert_state_start, convert_play_response
+from engine import create_deck, Game, MoveType, GameMove
+from models import Player, Card, Suit, Rank
 from sockjs_ext import EventSocketConnection, event
 
 import logging
@@ -37,9 +37,24 @@ def create_game(names):
 
     return game
 
+def convert_move_type(move_type):
+    if move_type == "pick":
+        return MoveType.pick
+    elif move_type == "play":
+        return MoveType.play
+    
+    return MoveType.wait
+
+def convert_card(rankId, suitId):
+    rank = next(x for x in Rank if int(x) == rankId)
+    suit = next(x for x in Suit if int(x) == suitId)
+
+    return Card(suit, rank)
+    
 
 class SocketConnection(EventSocketConnection):
     participants = set()
+    game = None
 
     def on_open(self, info):
         #user remains annonymous until they register, so they get no name
@@ -112,13 +127,38 @@ class SocketConnection(EventSocketConnection):
         #send the game initial state to all players
         names = [s.name for s in self.participants if s.name is not None]
 
-        game = create_game(names)
+        self.game = create_game(names)
 
         for participant in self.participants:
-            hand = game.player_hand(participant.name)
+            hand = self.game.player_hand(participant.name)
             participant.send_event("game:state:start", 
-                    convert_state_start(game.players, game.current_player,
-                        game.played_cards.top_card, hand))
+                    convert_state_start(self.game.players, self.game.current_player,
+                        self.game.played_cards.top_card, hand))
+
+    @event("game:player:move")
+    def player_move(self, message):
+        log.debug("%s plays move", self.name)
+
+        #parse message (wait, pick, play)
+        #format
+        """
+            "type": "play",
+            "card": { rank: 4, suit: 4 }
+        """
+        
+        move_type = convert_move_type(message["type"])
+        move = None
+        if move_type == MoveType.play:
+            card = message["card"]
+            move = GameMove(MoveType.play,
+                    convert_card(card["rank"], card["suit"]))
+        else:
+            move = GameMove(move_type)
+        
+        play_response = self.game.play(self.name, move)
+
+        self.send_event("game:player:response", convert_play_response(play_response))
+        
 
 
 class ClearHandler(tornado.web.RequestHandler):

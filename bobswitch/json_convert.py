@@ -16,3 +16,9 @@ def convert_state_start(players, starting_player, top_card, hand):
         "top_card": convert_card(top_card)
     }
 
+def convert_play_response(play_response):
+    return {
+        "success": play_response.success,
+        "message": play_response.message
+    }
+    

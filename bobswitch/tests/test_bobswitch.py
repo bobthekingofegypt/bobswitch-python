@@ -1,8 +1,10 @@
 import json
 
-from mock import MagicMock
+from mock import MagicMock, Mock
 from unittest2 import TestCase, main, skip
 
+from bobswitch import engine
+from bobswitch import models 
 from bobswitch import bobswitch
 
 class TestMeta(TestCase):
@@ -21,6 +23,30 @@ class TestMeta(TestCase):
         self.assertEquals(52 - (2*7) - 1, game.deck.number_of_cards())
         self.assertEquals("bob", game.players[0].name)
         self.assertEquals("scott", game.players[1].name)
+
+    def test_convert_move_type_pick(self):
+        move_type = bobswitch.convert_move_type("pick")
+        self.assertEquals(engine.MoveType.pick, move_type)
+    
+    def test_convert_move_type_play(self):
+        move_type = bobswitch.convert_move_type("play")
+        self.assertEquals(engine.MoveType.play, move_type)
+
+    def test_convert_move_type_wait(self):
+        move_type = bobswitch.convert_move_type("wait")
+        self.assertEquals(engine.MoveType.wait, move_type)
+
+    def test_convert_card(self):
+        card = bobswitch.convert_card(1,1)
+
+        self.assertEquals(card.rank, models.Rank.ace)
+        self.assertEquals(card.suit, models.Suit.clubs)
+    
+    def test_convert_card_2(self):
+        card = bobswitch.convert_card(3,2)
+
+        self.assertEquals(card.rank, models.Rank.three)
+        self.assertEquals(card.suit, models.Suit.diamonds)
         
 
 class TestSocketConnection(TestCase):
@@ -148,3 +174,95 @@ class TestSocketConnection(TestCase):
                 "game:player:ready", "bob")
         
         self.assertFalse(sc.send_event.called)
+
+    def test_player_move_wait(self):
+        sc = bobswitch.SocketConnection("")
+        sc.name = "bob"
+
+        sc.game = Mock()
+        sc.game.play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.send_event = MagicMock()
+
+        sc.player_move({
+            "type": "wait",
+        })
+        
+        args, kargs = sc.game.play.call_args
+        name, move = args
+        self.assertEquals("bob", name)
+        self.assertEquals(engine.MoveType.wait, move.move_type)
+
+        args, kargs = sc.send_event.call_args
+        key, state = args
+        self.assertEquals("game:player:response", key) 
+        self.assertEquals(True, state["success"]) 
+
+    def test_player_move_pick(self):
+        sc = bobswitch.SocketConnection("")
+        sc.name = "bob"
+
+        sc.game = Mock()
+        sc.game.play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.send_event = MagicMock()
+
+        sc.player_move({
+            "type": "pick",
+        })
+        
+        args, kargs = sc.game.play.call_args
+        name, move = args
+        self.assertEquals("bob", name)
+        self.assertEquals(engine.MoveType.pick, move.move_type)
+
+        args, kargs = sc.send_event.call_args
+        key, state = args
+        self.assertEquals("game:player:response", key) 
+        self.assertEquals(True, state["success"]) 
+
+    def test_player_move_play(self):
+        sc = bobswitch.SocketConnection("")
+        sc.name = "bob"
+
+        sc.game = Mock()
+        sc.game.play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.send_event = MagicMock()
+
+        sc.player_move({
+            "type": "play",
+            "card": { 
+                "rank": 4,
+                "suit": 2
+            }
+        })
+        
+        args, kargs = sc.game.play.call_args
+        name, move = args
+        self.assertEquals("bob", name)
+        self.assertEquals(engine.MoveType.play, move.move_type)
+        self.assertEquals(models.Rank.four, move.card.rank)
+
+        args, kargs = sc.send_event.call_args
+        key, state = args
+        self.assertEquals("game:player:response", key) 
+        self.assertEquals(True, state["success"]) 
+
+    def test_player_move_fail(self):
+        sc = bobswitch.SocketConnection("")
+        sc.name = "bob"
+
+        sc.game = Mock()
+        sc.game.play = MagicMock(return_value=engine.PlayResponse(False))
+        sc.send_event = MagicMock()
+
+        sc.player_move({
+            "type": "wait",
+            "card": { 
+                "rank": 4,
+                "suit": 2
+            }
+        })
+
+        args, kargs = sc.send_event.call_args
+        key, state = args
+        self.assertEquals("game:player:response", key) 
+        self.assertEquals(False, state["success"]) 
