@@ -158,7 +158,7 @@ class PlayedCards(CardGroup):
 
         self.top_card = None
 
-    def add_card(self, card):
+    def add_card(self, card, suit_override=None):
         """
         adds the given card to the hand
         """
@@ -167,6 +167,9 @@ class PlayedCards(CardGroup):
             self.top_card = card
         else:
             self.top_card = card
+
+        if suit_override:
+            self.top_card.suit = suit_override
 
     def return_played_cards(self):
         old_cards = self.cards

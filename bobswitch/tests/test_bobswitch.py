@@ -179,15 +179,15 @@ class TestSocketConnection(TestCase):
         sc = bobswitch.SocketConnection("")
         sc.name = "bob"
 
-        sc.game = Mock()
-        sc.game.play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.game["active"] = Mock()
+        sc.game["active"].play = MagicMock(return_value=engine.PlayResponse(True))
         sc.send_event = MagicMock()
 
         sc.player_move({
             "type": "wait",
         })
         
-        args, kargs = sc.game.play.call_args
+        args, kargs = sc.game["active"].play.call_args
         name, move = args
         self.assertEquals("bob", name)
         self.assertEquals(engine.MoveType.wait, move.move_type)
@@ -201,15 +201,15 @@ class TestSocketConnection(TestCase):
         sc = bobswitch.SocketConnection("")
         sc.name = "bob"
 
-        sc.game = Mock()
-        sc.game.play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.game["active"] = Mock()
+        sc.game["active"].play = MagicMock(return_value=engine.PlayResponse(True))
         sc.send_event = MagicMock()
 
         sc.player_move({
             "type": "pick",
         })
         
-        args, kargs = sc.game.play.call_args
+        args, kargs = sc.game["active"].play.call_args
         name, move = args
         self.assertEquals("bob", name)
         self.assertEquals(engine.MoveType.pick, move.move_type)
@@ -223,8 +223,8 @@ class TestSocketConnection(TestCase):
         sc = bobswitch.SocketConnection("")
         sc.name = "bob"
 
-        sc.game = Mock()
-        sc.game.play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.game["active"] = Mock()
+        sc.game["active"].play = MagicMock(return_value=engine.PlayResponse(True))
         sc.send_event = MagicMock()
 
         sc.player_move({
@@ -235,7 +235,7 @@ class TestSocketConnection(TestCase):
             }
         })
         
-        args, kargs = sc.game.play.call_args
+        args, kargs = sc.game["active"].play.call_args
         name, move = args
         self.assertEquals("bob", name)
         self.assertEquals(engine.MoveType.play, move.move_type)
@@ -250,8 +250,8 @@ class TestSocketConnection(TestCase):
         sc = bobswitch.SocketConnection("")
         sc.name = "bob"
 
-        sc.game = Mock()
-        sc.game.play = MagicMock(return_value=engine.PlayResponse(False))
+        sc.game["active"] = Mock()
+        sc.game["active"].play = MagicMock(return_value=engine.PlayResponse(False))
         sc.send_event = MagicMock()
 
         sc.player_move({

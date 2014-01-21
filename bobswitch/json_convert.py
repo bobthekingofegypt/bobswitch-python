@@ -5,15 +5,29 @@ def convert_card(card):
 def convert_hand(hand):
     return [convert_card(card) for card in hand.cards]
 
-def convert_state_start(players, starting_player, top_card, hand):
-    players = [player.name for player in players]
+def convert_state(state):
+    state_int = int(state)
+
+    if state_int == 0:
+        return "normal"
+    elif state_int == 1:
+        return "pick"
+    else:
+        return "wait"
+
+def convert_state_start(state, players, player_hands, starting_player, top_card, hand):
+    players = [{ 
+        "name": player.name, 
+        "count": player_hands[player.name].hand.number_of_cards()
+        } for player in players]
 
     return {
         "players": players,
         "starting_player": starting_player,
         "number_of_players": len(players),
         "hand": convert_hand(hand),
-        "top_card": convert_card(top_card)
+        "top_card": convert_card(top_card),
+        "state": convert_state(state)
     }
 
 def convert_play_response(play_response):

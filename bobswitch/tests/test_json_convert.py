@@ -1,6 +1,7 @@
 from unittest2 import TestCase, main, skip
 
 from bobswitch import models
+from bobswitch import engine 
 from bobswitch import json_convert
 
 class TestConvert(TestCase):
@@ -38,10 +39,25 @@ class TestConvert(TestCase):
 
         top = models.Card(models.Suit.spades, models.Rank.ace)
 
-        players = [models.Player("bob"), models.Player("scott")]
+        bob_hand = engine.PlayerHand("bob")
+        bob_hand.hand.add_card(card)
+        bob_hand.hand.add_card(card)
+        bob_hand.hand.add_card(card)
+        bob_hand.hand.add_card(card)
 
-        state_converted = json_convert.convert_state_start(players,
-                                1, top, hand)
+        scott_hand = engine.PlayerHand("scott")
+        scott_hand.hand.add_card(card)
+        scott_hand.hand.add_card(card)
+        scott_hand.hand.add_card(card)
+
+        players = [models.Player("bob"), models.Player("scott")]
+        player_hands = {
+                "bob": bob_hand,
+                "scott": scott_hand
+        }
+
+        state_converted = json_convert.convert_state_start(engine.GameState.WAIT, players,
+                                player_hands, 1, top, hand)
 
         self.assertEquals(2, state_converted["number_of_players"])
         self.assertEquals(2, len(state_converted["hand"]))
@@ -49,4 +65,15 @@ class TestConvert(TestCase):
         self.assertEquals(1, state_converted["starting_player"])
         self.assertEquals(3, state_converted["top_card"]["suit"])
         self.assertEquals(1, state_converted["top_card"]["rank"])
-        self.assertEquals(["bob", "scott"], state_converted["players"])
+
+        players = state_converted["players"]
+        player_one = players[0]
+        player_two = players[1]
+
+        self.assertEquals("bob", player_one["name"])
+        self.assertEquals(4, player_one["count"])
+        
+        self.assertEquals("scott", player_two["name"])
+        self.assertEquals(3, player_two["count"])
+
+        self.assertEquals("wait", state_converted["state"])

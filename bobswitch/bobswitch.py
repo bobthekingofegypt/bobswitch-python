@@ -50,11 +50,15 @@ def convert_card(rankId, suitId):
     suit = next(x for x in Suit if int(x) == suitId)
 
     return Card(suit, rank)
+
+def convert_suit(suitId):
+    return next(x for x in Suit if int(x) == suitId)
+
     
 
 class SocketConnection(EventSocketConnection):
     participants = set()
-    game = None
+    game = { "active": None } 
 
     def on_open(self, info):
         #user remains annonymous until they register, so they get no name
@@ -127,13 +131,15 @@ class SocketConnection(EventSocketConnection):
         #send the game initial state to all players
         names = [s.name for s in self.participants if s.name is not None]
 
-        self.game = create_game(names)
+        game = create_game(names)
 
         for participant in self.participants:
-            hand = self.game.player_hand(participant.name)
+            hand = game.player_hand(participant.name)
             participant.send_event("game:state:start", 
-                    convert_state_start(self.game.players, self.game.current_player,
-                        self.game.played_cards.top_card, hand))
+                convert_state_start(game.state, game.players, game.player_hands,
+                game.current_player, game.played_cards.top_card, hand))
+
+        self.game["active"] = game
 
     @event("game:player:move")
     def player_move(self, message):
@@ -152,12 +158,27 @@ class SocketConnection(EventSocketConnection):
             card = message["card"]
             move = GameMove(MoveType.play,
                     convert_card(card["rank"], card["suit"]))
+            if "suit" in message:
+                move.suit = convert_suit(message["suit"])
         else:
             move = GameMove(move_type)
         
-        play_response = self.game.play(self.name, move)
+        game = self.game["active"]
 
-        self.send_event("game:player:response", convert_play_response(play_response))
+        play_response = game.play(self.name, move)
+
+        self.send_event("game:player:response", 
+                convert_play_response(play_response))
+
+        if play_response.success:
+            for participant in self.participants:
+                hand = game.player_hand(participant.name)
+                participant.send_event("game:state:update", 
+                    convert_state_start(game.state, game.players, 
+                        game.player_hands,
+                        game.current_player, 
+                        game.played_cards.top_card, hand))
+
         
 
 

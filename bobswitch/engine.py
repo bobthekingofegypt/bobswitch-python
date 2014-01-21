@@ -4,6 +4,8 @@ import os
 from models import Deck, Card, Suit, Rank, Hand, PlayedCards
 from flufl.enum import Enum
 
+import logging
+log = logging.getLogger()
 
 class MoveType(Enum):
     pick = 0
@@ -51,23 +53,48 @@ def deal_player_hands(number_of_cards, players, deck):
     return player_hands
 
 
-def valid_pick(hand, top_card, game_state):
+def valid_pick(hand, top_card, game_state, first_play=False):
     """
     Checks whether a pick would be valid given the hand sent, a pick
     is valid if the user doesn't have any cards of the same suit, rank
     or an ace. Cant pick when waiting due to an eight
     """
-    if game_state == GameState.WAIT:
+    if first_play and top_card.rank == Rank.ace:
         return False
+
+    if game_state == GameState.WAIT:
+        log.debug("Attempting to pick when game is in wait mode")
+        return False
+
+    #check state is pick and top card rank not present in hand
+    if game_state == GameState.PICK:
+        pick_cards = [card for card in hand.cards
+                if card.rank == top_card.rank]
+
+        return not pick_cards
 
     matching_cards = [card for card in hand.cards 
             if card.suit == top_card.suit
             or card.rank == top_card.rank
             or card.rank == Rank.ace]
 
-    return not (matching_cards) 
+    if matching_cards:
+        log.debug("attempting to pick when playing is possible")
 
-def valid_play(card, hand, top_card, game_state):
+    return not matching_cards
+
+def valid_play(card, hand, top_card, game_state, first_play=False):
+
+    if first_play and top_card.rank == Rank.ace:
+        return True
+
+    eights = [c for c in hand.cards if c.rank == Rank.eight]
+    if game_state == GameState.WAIT and card is None and not eights:
+        return True
+
+    if game_state == GameState.WAIT and card is None and eights:
+        return False 
+
     if game_state == GameState.WAIT and card.rank != Rank.eight:
         return False
 
@@ -102,9 +129,10 @@ class PlayerHand(object):
 
 class GameMove(object):
 
-    def __init__(self, move_type, card=None):
+    def __init__(self, move_type, card=None, suit=None):
         self.move_type = move_type
         self.card = card
+        self.suit = suit #set if playing an ace
 
 
 def invalid_play_response(message):
@@ -139,6 +167,8 @@ class Game(object):
     def __init__(self, players, number_of_cards, deck, starting_player=1):
         self.deck = deck 
 
+        self.first_play = True
+
         self.current_player = starting_player 
         self.player_hands = deal_player_hands(number_of_cards, players, deck)
         self.players = players
@@ -158,7 +188,10 @@ class Game(object):
         self.update_state(top_card)
 
     def update_state(self, card):
-        if card.rank == Rank.two:
+        if card is None:
+            self.state = GameState.NORMAL
+            self.accumulated_count = 0
+        elif card.rank == Rank.two:
             self.state = GameState.PICK
             self.accumulated_count = self.accumulated_count + 2
         elif card.rank == Rank.four:
@@ -211,10 +244,15 @@ class Game(object):
                 self.pick(hand)
         elif move.move_type == MoveType.play:
             hand.remove_card(move.card)
-            self.played_cards.add_card(move.card)
+            self.played_cards.add_card(move.card, move.suit)
+            self.update_state(move.card)
+        elif move.move_type == MoveType.wait:
             self.update_state(move.card)
 
+
         self.set_next_player(move.card)
+
+        self.first_play = False
 
         return valid_play_response()
             
@@ -256,9 +294,9 @@ class Game(object):
     def valid_move(self, move, hand, top_card):
         #check pick vs play
         if move.move_type == MoveType.pick:
-            return valid_pick(hand, top_card, self.state)
+            return valid_pick(hand, top_card, self.state, self.first_play)
         
-        return valid_play(move.card, hand, top_card, self.state)
+        return valid_play(move.card, hand, top_card, self.state, self.first_play)
 
          
 
