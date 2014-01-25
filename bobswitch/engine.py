@@ -17,6 +17,7 @@ class GameState(Enum):
     NORMAL = 0
     PICK = 1
     WAIT = 2
+    FINISHED = 3
 
 class GameDirection(Enum):
     clockwise = 0
@@ -246,11 +247,15 @@ class Game(object):
             hand.remove_card(move.card)
             self.played_cards.add_card(move.card, move.suit)
             self.update_state(move.card)
+            
         elif move.move_type == MoveType.wait:
             self.update_state(move.card)
 
 
-        self.set_next_player(move.card)
+        if hand.number_of_cards() > 0:
+            self.set_next_player(move.card)
+        else:
+            self.state = GameState.FINISHED
 
         self.first_play = False
 

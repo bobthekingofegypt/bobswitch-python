@@ -505,10 +505,12 @@ class TestGame(TestCase):
 
         deck = models.Deck(None)
         deck.add_card(models.Card(models.Suit.clubs, models.Rank.ace))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.nine))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.eight))
         deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
         deck.add_card(models.Card(models.Suit.diamonds, models.Rank.two))
 
-        game = engine.Game(players, 1, deck)
+        game = engine.Game(players, 2, deck)
 
         move = engine.GameMove(engine.MoveType.play, 
                     models.Card(models.Suit.diamonds, models.Rank.two)) 
@@ -813,11 +815,14 @@ class TestGame(TestCase):
 
         deck = models.Deck(None)
         deck.add_card(models.Card(models.Suit.diamonds, models.Rank.six))
+        deck.add_card(models.Card(models.Suit.clubs, models.Rank.four))
+        deck.add_card(models.Card(models.Suit.spades, models.Rank.seven))
+        deck.add_card(models.Card(models.Suit.diamonds, models.Rank.nine))
         deck.add_card(models.Card(models.Suit.clubs, models.Rank.three))
         deck.add_card(models.Card(models.Suit.spades, models.Rank.three))
         deck.add_card(models.Card(models.Suit.diamonds, models.Rank.jack))
 
-        game = engine.Game(players, 1, deck)
+        game = engine.Game(players, 2, deck)
 
         move = engine.GameMove(engine.MoveType.play, 
                 models.Card(models.Suit.diamonds, models.Rank.jack))

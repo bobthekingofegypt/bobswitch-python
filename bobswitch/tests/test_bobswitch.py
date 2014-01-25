@@ -47,6 +47,9 @@ class TestMeta(TestCase):
 
         self.assertEquals(card.rank, models.Rank.three)
         self.assertEquals(card.suit, models.Suit.diamonds)
+
+    def test_convert_suit(self):
+        self.assertEquals(models.Suit.clubs, bobswitch.convert_suit(1))
         
 
 class TestSocketConnection(TestCase):

@@ -12,8 +12,10 @@ def convert_state(state):
         return "normal"
     elif state_int == 1:
         return "pick"
-    else:
+    elif state_int == 2:
         return "wait"
+    else:
+        return "finished"
 
 def convert_state_start(state, players, player_hands, starting_player, top_card, hand):
     players = [{ 

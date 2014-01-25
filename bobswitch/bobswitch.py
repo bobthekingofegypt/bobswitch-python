@@ -11,11 +11,14 @@
     :license: BSD, see LICENSE for more details.
 """
 
+import sys
+import argparse
+
 import tornado.ioloop
 import sockjs.tornado
 
 from json_convert import convert_hand, convert_state_start, convert_play_response
-from engine import create_deck, Game, MoveType, GameMove
+from engine import create_deck, Game, MoveType, GameMove, GameState
 from models import Player, Card, Suit, Rank
 from sockjs_ext import EventSocketConnection, event
 
@@ -179,6 +182,14 @@ class SocketConnection(EventSocketConnection):
                         game.current_player, 
                         game.played_cards.top_card, hand))
 
+        if game.state == GameState.FINISHED:
+            for participant in self.participants:
+                participant.ready = False
+
+
+
+
+
         
 
 
@@ -187,23 +198,39 @@ class ClearHandler(tornado.web.RequestHandler):
         print SocketConnection.participants.clear()
 
 
+
+def parse_args(argv=sys.argv[1:]):
+    description = """
+    Python server for playing bobswitch
+    """
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("-d", "--debug", help="enable debug mode",
+                    action="store_true")
+
+    return parser.parse_args(argv)
+
+
+
 if __name__ == "__main__":
     import logging
     logging.getLogger().setLevel(logging.DEBUG)
+
+    arguments = parse_args()
 
     BobSwitchRouter = sockjs.tornado.SockJSRouter(SocketConnection, 
             '/bobswitch')
 
     app = tornado.web.Application(
             BobSwitchRouter.urls,
-            debug=True
+            debug=arguments.debug
     )
 
-    app.listen(8080)
+    app.listen(4500)
 
-    debug_application = tornado.web.Application([
-        (r"/clear", ClearHandler),
-    ])                    
-    debug_application.listen(9433)
+    if arguments.debug:
+        debug_application = tornado.web.Application([
+            (r"/clear", ClearHandler),
+        ])                    
+        debug_application.listen(9433)
 
     tornado.ioloop.IOLoop.instance().start()
