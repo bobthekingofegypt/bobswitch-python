@@ -31,6 +31,8 @@ class Player(object):
         name player has chosen for the game
         """
         self.name = name
+        self.played = 0
+        self.won = 0
 
     def __repr__(self):
         return "Player: name - %r" % (self.name,)

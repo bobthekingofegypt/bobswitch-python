@@ -56,8 +56,8 @@ class TestConvert(TestCase):
                 "scott": scott_hand
         }
 
-        state_converted = json_convert.convert_state_start(engine.GameState.WAIT, players,
-                                player_hands, 1, top, hand)
+        state_converted = json_convert.convert_state_start(engine.GameState.WAIT, 
+                players, player_hands, 1, top, hand)
 
         self.assertEquals(2, state_converted["number_of_players"])
         self.assertEquals(2, len(state_converted["hand"]))
@@ -72,8 +72,12 @@ class TestConvert(TestCase):
 
         self.assertEquals("bob", player_one["name"])
         self.assertEquals(4, player_one["count"])
+        self.assertEquals(1, player_one["played"])
+        self.assertEquals(1, player_one["won"])
         
         self.assertEquals("scott", player_two["name"])
         self.assertEquals(3, player_two["count"])
+        self.assertEquals(2, player_two["played"])
+        self.assertEquals(1, player_two["won"])
 
         self.assertEquals("wait", state_converted["state"])
