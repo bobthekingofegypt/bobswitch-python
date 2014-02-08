@@ -7,6 +7,15 @@ from bobswitch import engine
 from bobswitch import models 
 from bobswitch import bobswitch
 
+def create_test_socket(name):
+    sc = bobswitch.SocketConnection("")
+    sc.on_open(None)
+    sc.name = name 
+    sc.room.players[name] = bobswitch.RoomPlayer(name, sc, 
+            models.Player(name))
+
+    return sc
+
 class TestMeta(TestCase):
 
     def test_wrap_chat_message(self):
@@ -15,9 +24,9 @@ class TestMeta(TestCase):
         self.assertEquals({'text': 'message', 'name': 'bob'}, message)
 
     def test_create_game(self):
-        names = ["bob", "scott"]
+        players = [models.Player("bob"), models.Player("scott")]
 
-        game = bobswitch.create_game(names)
+        game = bobswitch.create_game(players)
 
         #number of cards is equal to 52 minus one face up and 7 per player
         self.assertEquals(52 - (2*7) - 1, game.deck.number_of_cards())
@@ -56,13 +65,13 @@ class TestSocketConnection(TestCase):
 
     def setUp(self):
         bobswitch.SocketConnection.participants = set()
+        bobswitch.SocketConnection.room = bobswitch.Room()
 
     def test_on_open(self):
         sc = bobswitch.SocketConnection("")
         sc.on_open(None)
 
         self.assertEquals(None, sc.name)
-        self.assertEquals(False, sc.ready)
         self.assertTrue(sc in sc.participants)
 
     def test_on_close(self):
@@ -96,14 +105,11 @@ class TestSocketConnection(TestCase):
         sc.broadcast_event.assert_called_with(sc.participants, "players:added", 
                 "bob")
 
-    def test_listing(self):
-        sc = bobswitch.SocketConnection("")
-        sc.on_open(None)
-        sc.name = "bob"
 
-        sc2 = bobswitch.SocketConnection("")
-        sc2.on_open(None)
-        sc2.name = "Scott"
+
+    def test_listing(self):
+        sc = create_test_socket("bob")
+        sc2 = create_test_socket("Scott")
 
         sc.send_event = MagicMock()
         sc.listing(None)
@@ -117,14 +123,30 @@ class TestSocketConnection(TestCase):
         self.assertTrue("Scott" in names)
         self.assertTrue("bob" in names)
 
-    def test_player_ready_not_all_ready(self):
-        sc = bobswitch.SocketConnection("")
-        sc.on_open(None)
-        sc.name = "bob"
+    def test_two_players_ready_one_not_ready(self):
+        sc = create_test_socket("bob")
+        sc2 = create_test_socket("Scott")
 
-        sc2 = bobswitch.SocketConnection("")
-        sc2.on_open(None)
-        sc2.name = "Scott"
+        sc3 = bobswitch.SocketConnection("")
+        sc3.on_open(None)
+    
+        sc.broadcast_event = MagicMock()
+        sc.send_event = MagicMock()
+        sc.player_ready(None)
+        sc.broadcast_event.assert_called_with(sc.participants, 
+                "game:player:ready", "bob")
+
+        sc2.broadcast_event = MagicMock()
+        sc2.send_event = MagicMock()
+        sc2.player_ready(None)
+        sc2.broadcast_event.assert_called_with(sc2.participants, 
+                "game:player:ready", "Scott")
+
+        self.assertTrue(sc.send_event.called)
+
+    def test_player_ready_not_all_ready(self):
+        sc = create_test_socket("bob")
+        sc2 = create_test_socket("Scott")
     
         sc.broadcast_event = MagicMock()
         sc.send_event = MagicMock()
@@ -138,11 +160,16 @@ class TestSocketConnection(TestCase):
         sc = bobswitch.SocketConnection("")
         sc.on_open(None)
         sc.name = "bob"
+        sc.room.players["bob"] = bobswitch.RoomPlayer("bob", sc,
+                models.Player("bob"))
+        sc.room.players["bob"].ready = True
 
         sc2 = bobswitch.SocketConnection("")
         sc2.on_open(None)
         sc2.name = "Scott"
-        sc2.ready = True
+        sc2.room.players["Scott"] = bobswitch.RoomPlayer("Scott", sc2,
+                models.Player("Scott"))
+        sc2.room.players["Scott"].ready = True
     
         sc.broadcast_event = MagicMock()
         sc.send_event = MagicMock()
@@ -166,9 +193,7 @@ class TestSocketConnection(TestCase):
         self.assertEquals(7, len(state["hand"]))
 
     def test_player_ready_only_one(self):
-        sc = bobswitch.SocketConnection("")
-        sc.on_open(None)
-        sc.name = "bob"
+        sc = create_test_socket("bob")
 
         sc.broadcast_event = MagicMock()
         sc.send_event = MagicMock()
@@ -182,15 +207,15 @@ class TestSocketConnection(TestCase):
         sc = bobswitch.SocketConnection("")
         sc.name = "bob"
 
-        sc.game["active"] = Mock()
-        sc.game["active"].play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.room.active_game = Mock()
+        sc.room.active_game.play = MagicMock(return_value=engine.PlayResponse(False))
         sc.send_event = MagicMock()
 
         sc.player_move({
             "type": "wait",
         })
         
-        args, kargs = sc.game["active"].play.call_args
+        args, kargs = sc.room.active_game.play.call_args
         name, move = args
         self.assertEquals("bob", name)
         self.assertEquals(engine.MoveType.wait, move.move_type)
@@ -198,21 +223,20 @@ class TestSocketConnection(TestCase):
         args, kargs = sc.send_event.call_args
         key, state = args
         self.assertEquals("game:player:response", key) 
-        self.assertEquals(True, state["success"]) 
+        self.assertEquals(False, state["success"]) 
 
     def test_player_move_pick(self):
-        sc = bobswitch.SocketConnection("")
-        sc.name = "bob"
+        sc = create_test_socket("bob")
 
-        sc.game["active"] = Mock()
-        sc.game["active"].play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.room.active_game = Mock()
+        sc.room.active_game.play = MagicMock(return_value=engine.PlayResponse(False))
         sc.send_event = MagicMock()
 
         sc.player_move({
             "type": "pick",
         })
         
-        args, kargs = sc.game["active"].play.call_args
+        args, kargs = sc.room.active_game.play.call_args
         name, move = args
         self.assertEquals("bob", name)
         self.assertEquals(engine.MoveType.pick, move.move_type)
@@ -220,14 +244,14 @@ class TestSocketConnection(TestCase):
         args, kargs = sc.send_event.call_args
         key, state = args
         self.assertEquals("game:player:response", key) 
-        self.assertEquals(True, state["success"]) 
+        self.assertEquals(False, state["success"]) 
 
     def test_player_move_play(self):
         sc = bobswitch.SocketConnection("")
         sc.name = "bob"
 
-        sc.game["active"] = Mock()
-        sc.game["active"].play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.room.active_game = Mock()
+        sc.room.active_game.play = MagicMock(return_value=engine.PlayResponse(True))
         sc.send_event = MagicMock()
 
         sc.player_move({
@@ -238,7 +262,7 @@ class TestSocketConnection(TestCase):
             }
         })
         
-        args, kargs = sc.game["active"].play.call_args
+        args, kargs = sc.room.active_game.play.call_args
         name, move = args
         self.assertEquals("bob", name)
         self.assertEquals(engine.MoveType.play, move.move_type)
@@ -253,8 +277,8 @@ class TestSocketConnection(TestCase):
         sc = bobswitch.SocketConnection("")
         sc.name = "bob"
 
-        sc.game["active"] = Mock()
-        sc.game["active"].play = MagicMock(return_value=engine.PlayResponse(False))
+        sc.room.active_game = Mock()
+        sc.room.active_game.play = MagicMock(return_value=engine.PlayResponse(False))
         sc.send_event = MagicMock()
 
         sc.player_move({

@@ -20,7 +20,9 @@ def convert_state(state):
 def convert_state_start(state, players, player_hands, starting_player, top_card, hand):
     players = [{ 
         "name": player.name, 
-        "count": player_hands[player.name].hand.number_of_cards()
+        "count": player_hands[player.name].hand.number_of_cards(),
+        "played": player.played,
+        "won": player.won
         } for player in players]
 
     return {

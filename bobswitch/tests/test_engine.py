@@ -987,3 +987,24 @@ class TestGame(TestCase):
         self.assertEquals(models.Card(models.Suit.clubs, models.Rank.ten), status.top_card)
         self.assertEquals([1,2,2], status.counts)
 
+    def test_player_counts_updated_at_end_of_game(self):
+        player = models.Player("bob")
+        player_two = models.Player("john")
+
+        players = [player, player_two]
+
+        deck = populate_known_deck()
+
+        game = engine.Game(players, 1, deck)
+
+        move = engine.GameMove(engine.MoveType.play, 
+                models.Card(models.Suit.clubs, models.Rank.ten))
+
+        play_response = game.play("bob", move)
+        
+        self.assertEquals(engine.GameState.FINISHED, game.state)
+        self.assertTrue(play_response.success)
+        self.assertEquals(1, player.played)
+        self.assertEquals(1, player_two.played)
+        self.assertEquals(1, player.won)
+        self.assertEquals(0, player_two.won)

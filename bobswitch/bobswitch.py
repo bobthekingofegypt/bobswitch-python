@@ -31,8 +31,7 @@ def wrap_chat_message(name, message):
         "text": message
     }
 
-def create_game(names):
-    players = [Player(name) for name in names]
+def create_game(players):
     deck = create_deck()
     deck.shuffle()
     
@@ -57,21 +56,36 @@ def convert_card(rankId, suitId):
 def convert_suit(suitId):
     return next(x for x in Suit if int(x) == suitId)
 
+class Room(object):
+    def __init__(self):
+        self.active_game = None
+        self.players = {}
     
+class RoomPlayer(object):
+    def __init__(self, name, socket, player):
+        self.name = name
+        self.socket = socket
+        self.player = player
+        self.ready = False
+
 
 class SocketConnection(EventSocketConnection):
     participants = set()
-    game = { "active": None } 
+    room = Room()
 
     def on_open(self, info):
         #user remains annonymous until they register, so they get no name
         self.name = None 
-        self.ready = False
-        self.position = len(self.participants)
 
         self.participants.add(self)
 
     def on_close(self):
+        log.debug("Player disconnected: %s", self.name)
+
+        if self.name in self.room.players:
+            self.room.players[self.name].socket = None
+            self.broadcast_event(self.room.players, "players:disconnected", self.name)
+
         self.participants.remove(self)
 
 
@@ -96,16 +110,35 @@ class SocketConnection(EventSocketConnection):
     def login(self, name):
         log.debug("user '%s' logged in", name)
 
+        if name in [s.name for s in self.participants]:
+            log.debug("user tried to register already registered name")
+            return
+
         self.name = name 
-        self.broadcast_event(self.participants, "players:added", name)
+
+        if name in self.room.players:
+            self.room.players[name].socket = self
+            self.broadcast_event(self.room.players, "players:reconnected", self.name)
+
+            game = self.room.active_game
+            if game:
+                hand = game.player_hand(name)
+                self.send_event("game:state:start", 
+                    convert_state_start(game.state, game.players, game.player_hands,
+                    game.current_player, game.played_cards.top_card, hand))
+        else:
+            player = Player(name)
+            room_player = RoomPlayer(name, self, player)
+            self.room.players[name] = room_player
+            self.broadcast_event(self.participants, "players:added", name)
+
 
     @event("account:listing")
     def listing(self, message):
         log.debug("request for registered users")
 
-        #client only expects registered names to be returned
-        names = [{"name":s.name, "ready":s.ready} 
-                for s in self.participants if s.name is not None]
+        names = [{"name":s.name, "ready":s.ready, "disconnected": s.socket==None} 
+                for s in self.room.players.values()]
 
         self.send_event("players:listing", names)
 
@@ -118,31 +151,38 @@ class SocketConnection(EventSocketConnection):
     def player_ready(self, message):
         log.debug("%s ready to start game", self.name)
         
-        self.ready = True
+        player = self.room.players[self.name]
+        player.ready = True
 
         self.broadcast_event(self.participants, "game:player:ready", self.name)
 
-        all_ready = all([s.ready and s.name is not None 
-                            for s in self.participants])
+        all_ready = all([s.ready  
+                            for s in self.room.players.values()])
 
-        player_count = len(self.participants)
+        player_count = len(self.room.players)
         enough_players = player_count > 1 and player_count < 5
         if not all_ready or not enough_players:
             return
 
         #start the game
         #send the game initial state to all players
-        names = [s.name for s in self.participants if s.name is not None]
+        players = [s.player for s in self.room.players.values()]
 
-        game = create_game(names)
+        game = create_game(players)
 
-        for participant in self.participants:
-            hand = game.player_hand(participant.name)
-            participant.send_event("game:state:start", 
+        for participant in self.room.players.values():
+            socket = participant.socket
+            if socket == None:
+                continue
+            hand = game.player_hand(socket.name)
+            socket.send_event("game:state:start", 
                 convert_state_start(game.state, game.players, game.player_hands,
                 game.current_player, game.played_cards.top_card, hand))
 
-        self.game["active"] = game
+        self.room.active_game = game
+
+        for participant in self.room.players.values():
+            participant.ready = False
 
     @event("game:player:move")
     def player_move(self, message):
@@ -166,7 +206,7 @@ class SocketConnection(EventSocketConnection):
         else:
             move = GameMove(move_type)
         
-        game = self.game["active"]
+        game = self.room.active_game
 
         play_response = game.play(self.name, move)
 
@@ -174,16 +214,19 @@ class SocketConnection(EventSocketConnection):
                 convert_play_response(play_response))
 
         if play_response.success:
-            for participant in self.participants:
-                hand = game.player_hand(participant.name)
-                participant.send_event("game:state:update", 
+            for participant in self.room.players.values():
+                socket = participant.socket
+                if socket == None:
+                    continue
+                hand = game.player_hand(socket.name)
+                socket.send_event("game:state:update", 
                     convert_state_start(game.state, game.players, 
                         game.player_hands,
                         game.current_player, 
                         game.played_cards.top_card, hand))
 
         if game.state == GameState.FINISHED:
-            for participant in self.participants:
+            for participant in self.room.players.values():
                 participant.ready = False
 
 

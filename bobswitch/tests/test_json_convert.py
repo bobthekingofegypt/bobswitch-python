@@ -50,7 +50,13 @@ class TestConvert(TestCase):
         scott_hand.hand.add_card(card)
         scott_hand.hand.add_card(card)
 
-        players = [models.Player("bob"), models.Player("scott")]
+        bob = models.Player("bob")
+        bob.played = 1
+        bob.won = 1
+        scott = models.Player("scott")
+        scott.played = 2
+        scott.won = 1
+        players = [bob, scott]
         player_hands = {
                 "bob": bob_hand,
                 "scott": scott_hand

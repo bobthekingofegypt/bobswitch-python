@@ -255,6 +255,9 @@ class Game(object):
         if hand.number_of_cards() > 0:
             self.set_next_player(move.card)
         else:
+            current_player.won = current_player.won + 1
+            for p in self.players:
+                p.played = p.played + 1
             self.state = GameState.FINISHED
 
         self.first_play = False
