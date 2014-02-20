@@ -17,7 +17,8 @@ import argparse
 import tornado.ioloop
 import sockjs.tornado
 
-from json_convert import convert_hand, convert_state_start, convert_play_response
+from json_convert import convert_hand, convert_state_start, convert_play_response, \
+        convert_state_watch
 from engine import create_deck, Game, MoveType, GameMove, GameState
 from models import Player, Card, Suit, Rank
 from sockjs_ext import EventSocketConnection, event
@@ -59,6 +60,7 @@ def convert_suit(suitId):
 class Room(object):
     def __init__(self):
         self.active_game = None
+        self.active_players = {}
         self.players = {}
     
 class RoomPlayer(object):
@@ -164,24 +166,34 @@ class SocketConnection(EventSocketConnection):
         if not all_ready or not enough_players:
             return
 
+        self.room.active_players = self.room.players.copy()
         #start the game
         #send the game initial state to all players
         players = [s.player for s in self.room.players.values()]
 
         game = create_game(players)
 
-        for participant in self.room.players.values():
+        for participant in self.room.active_players.values():
             socket = participant.socket
             if socket == None:
+                #player is currently disconnected, just ignore him he will
+                #pick up state on reconnection
                 continue
             hand = game.player_hand(socket.name)
             socket.send_event("game:state:start", 
                 convert_state_start(game.state, game.players, game.player_hands,
                 game.current_player, game.played_cards.top_card, hand))
 
+        for participant in self.participants:
+            if participant.name not in self.room.active_players:
+                participant.send_event("game:state:watch", 
+                    convert_state_watch(game.state, game.players, game.player_hands,
+                        game.current_player, game.played_cards.top_card))
+
+
         self.room.active_game = game
 
-        for participant in self.room.players.values():
+        for participant in self.room.active_players.values():
             participant.ready = False
 
     @event("game:player:move")
@@ -214,7 +226,7 @@ class SocketConnection(EventSocketConnection):
                 convert_play_response(play_response))
 
         if play_response.success:
-            for participant in self.room.players.values():
+            for participant in self.room.active_players.values():
                 socket = participant.socket
                 if socket == None:
                     continue
@@ -225,7 +237,15 @@ class SocketConnection(EventSocketConnection):
                         game.current_player, 
                         game.played_cards.top_card, hand))
 
+            for participant in self.participants:
+                if participant.name not in self.room.active_players:
+                    participant.send_event("game:state:watch", 
+                        convert_state_watch(game.state, game.players, game.player_hands,
+                            game.current_player, game.played_cards.top_card))
+
         if game.state == GameState.FINISHED:
+            self.room.active_game = None
+            self.room.active_players = None
             for participant in self.room.players.values():
                 participant.ready = False
 
@@ -238,7 +258,8 @@ class SocketConnection(EventSocketConnection):
 
 class ClearHandler(tornado.web.RequestHandler):
     def get(self):
-        print SocketConnection.participants.clear()
+        SocketConnection.participants.clear()
+        SocketConnection.room = Room()
 
 
 

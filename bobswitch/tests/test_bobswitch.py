@@ -129,6 +129,7 @@ class TestSocketConnection(TestCase):
 
         sc3 = bobswitch.SocketConnection("")
         sc3.on_open(None)
+        sc3.send_event = MagicMock()
     
         sc.broadcast_event = MagicMock()
         sc.send_event = MagicMock()
@@ -141,6 +142,8 @@ class TestSocketConnection(TestCase):
         sc2.player_ready(None)
         sc2.broadcast_event.assert_called_with(sc2.participants, 
                 "game:player:ready", "Scott")
+
+        self.assertTrue(sc3.send_event.called)
 
         self.assertTrue(sc.send_event.called)
 
@@ -228,6 +231,7 @@ class TestSocketConnection(TestCase):
     def test_player_move_pick(self):
         sc = create_test_socket("bob")
 
+        sc.room.active_players = sc.room.players.copy()
         sc.room.active_game = Mock()
         sc.room.active_game.play = MagicMock(return_value=engine.PlayResponse(False))
         sc.send_event = MagicMock()

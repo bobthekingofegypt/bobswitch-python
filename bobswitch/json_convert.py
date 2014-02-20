@@ -34,6 +34,22 @@ def convert_state_start(state, players, player_hands, starting_player, top_card,
         "state": convert_state(state)
     }
 
+def convert_state_watch(state, players, player_hands, starting_player, top_card):
+    players = [{ 
+        "name": player.name, 
+        "count": player_hands[player.name].hand.number_of_cards(),
+        "played": player.played,
+        "won": player.won
+        } for player in players]
+
+    return {
+        "players": players,
+        "starting_player": starting_player,
+        "number_of_players": len(players),
+        "top_card": convert_card(top_card),
+        "state": convert_state(state)
+    }
+
 def convert_play_response(play_response):
     return {
         "success": play_response.success,
