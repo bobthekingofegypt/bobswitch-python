@@ -278,7 +278,7 @@ class SocketConnection(EventSocketConnection):
 class ClearHandler(tornado.web.RequestHandler):
     def get(self):
         SocketConnection.participants.clear()
-        SocketConnection.room = Room()
+        SocketConnection.rooms = {}
 
 
 
