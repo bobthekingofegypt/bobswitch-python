@@ -85,7 +85,7 @@ class TestMeta(TestCase):
                 super(TestMessage, self).__init__(session)
 
             @event
-            def test1(self, message):
+            def test1(self, room, message):
                 self.update_called()
 
         testMessage = TestMessage(None, update_called)
@@ -120,7 +120,7 @@ class TestMeta(TestCase):
                 super(TestMessage, self).__init__(session)
 
             @event
-            def test1(self, message):
+            def test1(self, room, message):
                 self.update_called(message)
 
         testMessage = TestMessage(None, update_called)

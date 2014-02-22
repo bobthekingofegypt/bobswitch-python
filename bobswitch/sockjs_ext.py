@@ -79,6 +79,7 @@ class EventSocketConnection(sockjs.tornado.SockJSConnection):
     def on_message(self, message):
         decoded_json = json.loads(message)
         name = decoded_json["name"];
+        room = decoded_json["room"] if "room" in decoded_json else None;
         handler = self._events.get(name)
 
         if handler:
@@ -86,7 +87,7 @@ class EventSocketConnection(sockjs.tornado.SockJSConnection):
             if "message" in decoded_json:
                 message = decoded_json["message"]
 
-            return handler(self, message)
+            return handler(self, room, message)
         else:
             logger.error('Invalid event name: %s' % name)
 
@@ -108,4 +109,4 @@ class EventSocketConnection(sockjs.tornado.SockJSConnection):
             "message": message
         }
 
-        self.broadcast(self.participants, json.dumps(data))
+        self.broadcast(participants, json.dumps(data))

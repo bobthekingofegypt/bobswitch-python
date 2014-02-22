@@ -7,14 +7,24 @@ from bobswitch import engine
 from bobswitch import models 
 from bobswitch import bobswitch
 
-def create_test_socket(name):
+def create_test_socket(name, room):
     sc = bobswitch.SocketConnection("")
     sc.on_open(None)
     sc.name = name 
-    sc.room.players[name] = bobswitch.RoomPlayer(name, sc, 
+    sc.active_room = room 
+    sc.active_room.participants.add(sc)
+    sc.active_room.players[name] = bobswitch.RoomPlayer(name, sc, 
             models.Player(name))
 
     return sc
+
+def create_test_game(player_names):
+    deck = engine.create_deck()
+    deck.shuffle()
+    players = [models.Player(name) for name in player_names]
+    game = engine.Game(players, 7, deck)
+
+    return game
 
 class TestMeta(TestCase):
 
@@ -85,12 +95,11 @@ class TestSocketConnection(TestCase):
         self.assertFalse(sc in sc.participants)
 
     def test_chat_message(self):
-        sc = bobswitch.SocketConnection("")
-        sc.name = "bob"
+        sc = create_test_socket("bob", bobswitch.Room())
 
         sc.broadcast_event = MagicMock()
 
-        sc.chat_message("Hello")
+        sc.chat_message("room", "Hello")
 
         sc.broadcast_event.assert_called_with(sc.participants, "chat:message", 
                 {"name": "bob", "text": "Hello"})
@@ -98,9 +107,11 @@ class TestSocketConnection(TestCase):
     def test_login(self):
         sc = bobswitch.SocketConnection("")
         sc.on_open(None)
+        sc.active_room = bobswitch.Room()
+        sc.active_room.participants.add(sc)
 
         sc.broadcast_event = MagicMock()
-        sc.login("bob")
+        sc.login("room", "bob")
 
         sc.broadcast_event.assert_called_with(sc.participants, "players:added", 
                 "bob")
@@ -108,11 +119,14 @@ class TestSocketConnection(TestCase):
 
 
     def test_listing(self):
-        sc = create_test_socket("bob")
-        sc2 = create_test_socket("Scott")
+        room = bobswitch.Room()
+        sc = create_test_socket("bob", room)
+        sc2 = create_test_socket("Scott", room)
+
+        sc.rooms["room"] = room
 
         sc.send_event = MagicMock()
-        sc.listing(None)
+        sc.listing("room", None)
 
         args, kargs = sc.send_event.call_args
         key, listing = args
@@ -124,23 +138,26 @@ class TestSocketConnection(TestCase):
         self.assertTrue("bob" in names)
 
     def test_two_players_ready_one_not_ready(self):
-        sc = create_test_socket("bob")
-        sc2 = create_test_socket("Scott")
+        room = bobswitch.Room()
+        sc = create_test_socket("bob", room)
+        sc2 = create_test_socket("Scott", room)
 
         sc3 = bobswitch.SocketConnection("")
         sc3.on_open(None)
+        sc3.active_room = sc.active_room
+        sc3.active_room.participants.add(sc3)
         sc3.send_event = MagicMock()
     
         sc.broadcast_event = MagicMock()
         sc.send_event = MagicMock()
-        sc.player_ready(None)
-        sc.broadcast_event.assert_called_with(sc.participants, 
+        sc.player_ready("room", None)
+        sc.broadcast_event.assert_called_with(sc.active_room.participants, 
                 "game:player:ready", "bob")
 
         sc2.broadcast_event = MagicMock()
         sc2.send_event = MagicMock()
-        sc2.player_ready(None)
-        sc2.broadcast_event.assert_called_with(sc2.participants, 
+        sc2.player_ready("room", None)
+        sc2.broadcast_event.assert_called_with(sc2.active_room.participants, 
                 "game:player:ready", "Scott")
 
         self.assertTrue(sc3.send_event.called)
@@ -148,37 +165,31 @@ class TestSocketConnection(TestCase):
         self.assertTrue(sc.send_event.called)
 
     def test_player_ready_not_all_ready(self):
-        sc = create_test_socket("bob")
-        sc2 = create_test_socket("Scott")
+        room = bobswitch.Room()
+        sc = create_test_socket("bob", room)
+        sc2 = create_test_socket("Scott", room)
     
         sc.broadcast_event = MagicMock()
         sc.send_event = MagicMock()
-        sc.player_ready(None)
+        sc.player_ready("room", None)
         sc.broadcast_event.assert_called_with(sc.participants, 
                 "game:player:ready", "bob")
 
         self.assertFalse(sc.send_event.called)
 
     def test_player_ready_all_ready(self):
-        sc = bobswitch.SocketConnection("")
-        sc.on_open(None)
-        sc.name = "bob"
-        sc.room.players["bob"] = bobswitch.RoomPlayer("bob", sc,
-                models.Player("bob"))
-        sc.room.players["bob"].ready = True
+        room = bobswitch.Room()
+        sc = create_test_socket("bob", room)
+        sc2 = create_test_socket("Scott", room)
+        sc.active_room.players["bob"].ready = True
 
-        sc2 = bobswitch.SocketConnection("")
-        sc2.on_open(None)
-        sc2.name = "Scott"
-        sc2.room.players["Scott"] = bobswitch.RoomPlayer("Scott", sc2,
-                models.Player("Scott"))
-        sc2.room.players["Scott"].ready = True
+        sc2.active_room.players["Scott"].ready = True
     
         sc.broadcast_event = MagicMock()
         sc.send_event = MagicMock()
         sc2.send_event = MagicMock()
 
-        sc.player_ready(None)
+        sc.player_ready("room", None)
 
         sc.broadcast_event.assert_called_with(sc.participants, 
                 "game:player:ready", "bob")
@@ -196,96 +207,116 @@ class TestSocketConnection(TestCase):
         self.assertEquals(7, len(state["hand"]))
 
     def test_player_ready_only_one(self):
-        sc = create_test_socket("bob")
+        sc = create_test_socket("bob", bobswitch.Room())
 
         sc.broadcast_event = MagicMock()
         sc.send_event = MagicMock()
-        sc.player_ready(None)
+        sc.player_ready("room", None)
         sc.broadcast_event.assert_called_with(sc.participants, 
                 "game:player:ready", "bob")
         
         self.assertFalse(sc.send_event.called)
 
     def test_player_move_wait(self):
-        sc = bobswitch.SocketConnection("")
-        sc.name = "bob"
+        sc = create_test_socket("bob", bobswitch.Room())
+        sc.active_room.active_players = sc.active_room.players.copy()
 
-        sc.room.active_game = Mock()
-        sc.room.active_game.play = MagicMock(return_value=engine.PlayResponse(False))
         sc.send_event = MagicMock()
 
-        sc.player_move({
+        game = create_test_game(["bob"])
+        game.play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.active_room.active_game = game
+
+        sc.player_move("room", {
             "type": "wait",
         })
         
-        args, kargs = sc.room.active_game.play.call_args
+        args, kargs = sc.active_room.active_game.play.call_args
         name, move = args
         self.assertEquals("bob", name)
         self.assertEquals(engine.MoveType.wait, move.move_type)
 
-        args, kargs = sc.send_event.call_args
-        key, state = args
+        name, call_args, c = sc.send_event.mock_calls[0]
+        key, message = call_args 
         self.assertEquals("game:player:response", key) 
-        self.assertEquals(False, state["success"]) 
+        self.assertEquals(True, message["success"]) 
+
+        name, call_args, c = sc.send_event.mock_calls[1]
+        key, message = call_args 
+        self.assertEquals("game:state:update", key) 
 
     def test_player_move_pick(self):
-        sc = create_test_socket("bob")
+        sc = create_test_socket("bob", bobswitch.Room())
+        sc.active_room.active_players = sc.active_room.players.copy()
 
-        sc.room.active_players = sc.room.players.copy()
-        sc.room.active_game = Mock()
-        sc.room.active_game.play = MagicMock(return_value=engine.PlayResponse(False))
         sc.send_event = MagicMock()
 
-        sc.player_move({
+        game = create_test_game(["bob"])
+        game.play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.active_room.active_game = game
+
+        sc.player_move("room", {
             "type": "pick",
         })
         
-        args, kargs = sc.room.active_game.play.call_args
+        args, kargs = sc.active_room.active_game.play.call_args
         name, move = args
         self.assertEquals("bob", name)
         self.assertEquals(engine.MoveType.pick, move.move_type)
 
-        args, kargs = sc.send_event.call_args
-        key, state = args
+        name, call_args, c = sc.send_event.mock_calls[0]
+        key, message = call_args 
         self.assertEquals("game:player:response", key) 
-        self.assertEquals(False, state["success"]) 
+        self.assertEquals(True, message["success"]) 
+
+        name, call_args, c = sc.send_event.mock_calls[1]
+        key, message = call_args 
+        self.assertEquals("game:state:update", key) 
 
     def test_player_move_play(self):
-        sc = bobswitch.SocketConnection("")
-        sc.name = "bob"
+        sc = create_test_socket("bob", bobswitch.Room())
+        sc.active_room.active_players = sc.active_room.players.copy()
 
-        sc.room.active_game = Mock()
-        sc.room.active_game.play = MagicMock(return_value=engine.PlayResponse(True))
         sc.send_event = MagicMock()
 
-        sc.player_move({
+        game = create_test_game(["bob"])
+        game.play = MagicMock(return_value=engine.PlayResponse(True))
+        sc.active_room.active_game = game
+
+        sc.player_move("room", {
             "type": "play",
             "card": { 
                 "rank": 4,
                 "suit": 2
             }
         })
-        
-        args, kargs = sc.room.active_game.play.call_args
+
+        args, kargs = sc.active_room.active_game.play.call_args
         name, move = args
         self.assertEquals("bob", name)
         self.assertEquals(engine.MoveType.play, move.move_type)
         self.assertEquals(models.Rank.four, move.card.rank)
 
-        args, kargs = sc.send_event.call_args
-        key, state = args
+        name, call_args, c = sc.send_event.mock_calls[0]
+        key, message = call_args 
         self.assertEquals("game:player:response", key) 
-        self.assertEquals(True, state["success"]) 
+        self.assertEquals(True, message["success"]) 
+
+        name, call_args, c = sc.send_event.mock_calls[1]
+        key, message = call_args 
+        self.assertEquals("game:state:update", key) 
 
     def test_player_move_fail(self):
-        sc = bobswitch.SocketConnection("")
-        sc.name = "bob"
+        sc = create_test_socket("bob", bobswitch.Room())
+        sc.active_room.active_players = sc.active_room.players.copy()
 
-        sc.room.active_game = Mock()
-        sc.room.active_game.play = MagicMock(return_value=engine.PlayResponse(False))
         sc.send_event = MagicMock()
 
-        sc.player_move({
+        game = create_test_game(["bob"])
+        game.play = MagicMock(return_value=engine.PlayResponse(False))
+        sc.active_room.active_game = game
+
+        sc.player_move("room", {
             "type": "wait",
             "card": { 
                 "rank": 4,
