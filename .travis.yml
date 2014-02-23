@@ -5,8 +5,12 @@ python:
 
 install:
   - pip install -r requirements.txt
+  - pip install coveralls
 
-script: rake test
+script: rake test:coverage
+
+after_success:
+  coveralls
 
 notifications:
   email: true 
